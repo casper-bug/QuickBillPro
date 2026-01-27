@@ -512,13 +512,16 @@
             height: 200px;
             gap: 0.5rem;
             padding: 1rem 0;
+            overflow-x: auto;
+            overflow-y: visible;
         }
         
         .bar-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            flex: 1;
+            flex: 0 0 auto;
+            min-width: 40px;
         }
         
         .bar {
@@ -539,6 +542,8 @@
             position: relative;
             height: 200px;
             width: 100%;
+            overflow-x: auto;
+            overflow-y: visible;
         }
         
         .chart-grid-line {
@@ -1499,6 +1504,10 @@
                                 <button onclick="handlePhoneSendCode()" id="phone-send-btn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors mt-3">Send Code</button>
                             </div>
                             <div id="phone-verify-step" class="hidden">
+                                <div class="p-4 bg-green-50 rounded-2xl border border-green-200 mb-3" style="background-color: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3);">
+                                    <p class="font-bold text-sm mb-1" style="color: var(--text-primary);">✅ Code Sent!</p>
+                                    <p class="text-xs" style="color: var(--text-secondary);">Enter the 6-digit verification code sent to your phone.</p>
+                                </div>
                                 <input type="text" id="auth-verification-code" placeholder="Enter 6-digit code" maxlength="6" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
                                 <div class="flex gap-3 mt-3">
                                     <button onclick="handlePhoneVerifyCode()" class="flex-1 bg-green-600 text-white py-4 rounded-2xl font-bold text-sm hover:bg-green-700 transition-colors">Verify</button>
@@ -2020,9 +2029,9 @@
                 // Set up detection handler after initialization
                 Quagga.onDetected(function(data) {
                     if (!isScannerActive) return;
-            const code = data.codeResult.code;
-            console.log('Scanned barcode:', code);
-            
+                    const code = data.codeResult.code;
+                    console.log('Scanned barcode:', code);
+                    
                     // Normalize the scanned code (remove whitespace, convert to string)
                     const normalizedCode = code.toString().trim();
                     
@@ -2061,7 +2070,7 @@
                     if (item) {
                         addItemRowWithData(item.name, item.price);
                         showToast(`Added: ${item.name} (₹${item.price.toFixed(2)})`);
-            stopScanner();
+                        stopScanner();
                     } else {
                         // Debug: show available barcodes
                         const barcodes = stock.filter(s => s.barcode).map(s => ({ name: s.name, barcode: s.barcode.toString() }));
@@ -2374,9 +2383,6 @@
             
             const svgNS = "http://www.w3.org/2000/svg";
             const svg = document.createElementNS(svgNS, "svg");
-            svg.setAttribute("width", "100%");
-            svg.setAttribute("height", "100%");
-            svg.setAttribute("viewBox", "0 0 400 200");
             
             let groupedData = {};
             const now = new Date();
@@ -2414,15 +2420,26 @@
                 });
             }
             
+            // Calculate SVG width based on data points - ensure minimum spacing
+            const minWidth = 400;
+            const pointSpacing = 25; // Minimum pixels per data point
+            const calculatedWidth = Math.max(minWidth, 40 + (dataPoints.length * pointSpacing) + 40);
+            
+            svg.setAttribute("width", calculatedWidth);
+            svg.setAttribute("height", "200");
+            svg.setAttribute("viewBox", `0 0 ${calculatedWidth} 200`);
+            
             const counts = dataPoints.map(dp => dp.count);
             const maxCount = Math.max(...counts, 1);
+            
+            const chartWidth = calculatedWidth - 80;
             
             for (let i = 0; i <= 4; i++) {
                 const y = 40 + (i * 40);
                 const line = document.createElementNS(svgNS, "line");
                 line.setAttribute("x1", "40");
                 line.setAttribute("y1", y);
-                line.setAttribute("x2", "360");
+                line.setAttribute("x2", calculatedWidth - 40);
                 line.setAttribute("y2", y);
                 line.setAttribute("class", "chart-grid-line");
                 svg.appendChild(line);
@@ -2438,7 +2455,7 @@
             }
             
             const points = dataPoints.map((dp, i) => {
-                const x = 40 + (i * (320 / (dataPoints.length - 1)));
+                const x = 40 + (i * (chartWidth / (dataPoints.length - 1 || 1)));
                 const y = 200 - 40 - (dp.count / maxCount * 160);
                 return `${x},${y}`;
             }).join(' ');
@@ -2449,14 +2466,14 @@
             polyline.setAttribute("fill", "none");
             svg.appendChild(polyline);
             
-            const areaPoints = `${points} 360,200 40,200`;
+            const areaPoints = `${points} ${calculatedWidth - 40},200 40,200`;
             const polygon = document.createElementNS(svgNS, "polygon");
             polygon.setAttribute("points", areaPoints);
             polygon.setAttribute("class", "area-path");
             svg.appendChild(polygon);
             
             dataPoints.forEach((dp, i) => {
-                const x = 40 + (i * (320 / (dataPoints.length - 1)));
+                const x = 40 + (i * (chartWidth / (dataPoints.length - 1 || 1)));
                 const y = 200 - 40 - (dp.count / maxCount * 160);
                 
                 const circle = document.createElementNS(svgNS, "circle");
@@ -4274,14 +4291,14 @@
             showToast("All data exported successfully!");
         }
 
-        document.getElementById('import-file-input').addEventListener('change', (event) => {
+        document.getElementById('import-file-input').addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (!file) {
                 return;
             }
 
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
                     const importedData = JSON.parse(e.target.result);
 
@@ -4296,40 +4313,99 @@
                         return;
                     }
 
-                    companyDetails = {
-                        gstNumber: '',
-                        defaultBillNotes: '',
-                        ...importedData.companyDetails
-                    };
+                    // Check if user has existing data
+                    const hasExistingData = orders.length > 0 || completedOrders.length > 0 || stock.length > 0 || notes.length > 0;
+                    
+                    let shouldReplace = true;
+                    if (hasExistingData) {
+                        shouldReplace = await showConfirmation("You have existing data. Choose 'Yes' to REPLACE all data (existing data will be deleted) or 'No' to MERGE imported data with existing data (keeps both).");
+                    }
 
-                    const processedImportedOrders = importedData.orders.map(order => ({
-                        ...order,
-                        orderDate: order.orderDate ? new Date(order.orderDate) : new Date()
-                    }));
-                    orders = processedImportedOrders.filter(order => !order.isDelivered);
-                    completedOrders = processedImportedOrders.filter(order => order.isDelivered);
-                    orders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
-                    completedOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+                    if (shouldReplace) {
+                        // Replace mode - overwrite all data
+                        companyDetails = {
+                            gstNumber: '',
+                            defaultBillNotes: '',
+                            ...importedData.companyDetails
+                        };
 
-                    const processedImportedNotes = importedData.notes.map(note => ({
-                        ...note,
-                        createdAt: note.createdAt ? new Date(note.createdAt) : new Date()
-                    }));
-                    notes = processedImportedNotes;
-                    notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                        const processedImportedOrders = importedData.orders.map(order => ({
+                            ...order,
+                            orderDate: order.orderDate ? new Date(order.orderDate) : new Date()
+                        }));
+                        orders = processedImportedOrders.filter(order => !order.isDelivered);
+                        completedOrders = processedImportedOrders.filter(order => order.isDelivered);
+                        orders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+                        completedOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 
-                    stock = importedData.stock.map(item => ({
-                        ...item,
-                        price: parseFloat(item.price)
-                    }));
-                    stock.sort((a, b) => a.name.localeCompare(b.name));
+                        const processedImportedNotes = importedData.notes.map(note => ({
+                            ...note,
+                            createdAt: note.createdAt ? new Date(note.createdAt) : new Date()
+                        }));
+                        notes = processedImportedNotes;
+                        notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                        stock = importedData.stock.map(item => ({
+                            ...item,
+                            price: parseFloat(item.price)
+                        }));
+                        stock.sort((a, b) => a.name.localeCompare(b.name));
+                        
+                        showToast("Data replaced successfully!");
+                    } else {
+                        // Merge mode - combine imported data with existing data
+                        companyDetails = {
+                            ...companyDetails,
+                            ...importedData.companyDetails
+                        };
+
+                        const processedImportedOrders = importedData.orders.map(order => ({
+                            ...order,
+                            orderDate: order.orderDate ? new Date(order.orderDate) : new Date()
+                        }));
+                        
+                        // Merge orders - avoid duplicates by ID
+                        const existingOrderIds = new Set([...orders, ...completedOrders].filter(o => o.id).map(o => o.id));
+                        const newOrders = processedImportedOrders.filter(order => order.id && !existingOrderIds.has(order.id));
+                        
+                        orders = [...orders, ...newOrders.filter(order => !order.isDelivered)];
+                        completedOrders = [...completedOrders, ...newOrders.filter(order => order.isDelivered)];
+                        orders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+                        completedOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+
+                        // Merge notes - avoid duplicates by ID
+                        const processedImportedNotes = importedData.notes.map(note => ({
+                            ...note,
+                            createdAt: note.createdAt ? new Date(note.createdAt) : new Date()
+                        }));
+                        const existingNoteIds = new Set(notes.filter(n => n.id).map(n => n.id));
+                        const newNotes = processedImportedNotes.filter(note => note.id && !existingNoteIds.has(note.id));
+                        notes = [...notes, ...newNotes];
+                        notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                        // Merge stock - avoid duplicates by ID, update existing items
+                        const importedStock = importedData.stock.map(item => ({
+                            ...item,
+                            price: parseFloat(item.price)
+                        }));
+                        
+                        const stockMap = new Map(stock.filter(item => item.id).map(item => [item.id, item]));
+                        importedStock.forEach(item => {
+                            if (item.id) {
+                                stockMap.set(item.id, item);
+                            }
+                        });
+                        stock = Array.from(stockMap.values());
+                        stock.sort((a, b) => a.name.localeCompare(b.name));
+                        
+                        showToast("Data merged successfully!");
+                    }
 
                     saveDataToLocalStorage('companyDetails', companyDetails);
                     saveDataToLocalStorage('orders', [...orders, ...completedOrders]);
                     saveDataToLocalStorage('notes', notes);
                     saveDataToLocalStorage('stock', stock);
 
-                    showToast("Data imported successfully!");
                     renderSettings();
                     renderAllOrders();
                     renderNotes();
