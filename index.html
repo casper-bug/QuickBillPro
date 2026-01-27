@@ -510,10 +510,11 @@
             display: flex;
             align-items: flex-end;
             height: 200px;
-            gap: 0.5rem;
+            gap: 1rem;
             padding: 1rem 0;
             overflow-x: auto;
-            overflow-y: visible;
+            overflow-y: hidden;
+            min-width: 100%;
         }
         
         .bar-container {
@@ -521,7 +522,7 @@
             flex-direction: column;
             align-items: center;
             flex: 0 0 auto;
-            min-width: 40px;
+            min-width: 50px;
         }
         
         .bar {
@@ -533,9 +534,20 @@
         
         .bar-label {
             margin-top: 0.5rem;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             text-align: center;
             color: var(--text-secondary);
+            white-space: nowrap;
+            max-width: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .bar-value {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
         }
         
         .simple-line-chart {
@@ -543,7 +555,7 @@
             height: 200px;
             width: 100%;
             overflow-x: auto;
-            overflow-y: visible;
+            overflow-y: hidden;
         }
         
         .chart-grid-line {
@@ -1465,6 +1477,24 @@
                         <div id="email-signin-form" class="space-y-3">
                             <input type="email" id="auth-email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
                             <input type="password" id="auth-password" placeholder="Password" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
+                            <div id="password-requirements" class="hidden p-3 bg-blue-50 rounded-xl border border-blue-200 text-xs space-y-1" style="background-color: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3);">
+                                <p class="font-bold" style="color: var(--text-primary);">Password Requirements:</p>
+                                <ul class="list-disc list-inside space-y-0.5" style="color: var(--text-secondary);">
+                                    <li id="req-length">At least 6 characters</li>
+                                    <li id="req-letter">Contains a letter</li>
+                                    <li id="req-number">Contains a number</li>
+                                </ul>
+                            </div>
+                            <button onclick="toggleForgotPassword()" class="text-xs text-blue-600 hover:underline font-medium">Forgot Password?</button>
+                            <div id="forgot-password-form" class="hidden p-4 bg-purple-50 rounded-2xl border border-purple-200 space-y-3" style="background-color: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3);">
+                                <p class="text-xs font-bold" style="color: var(--text-primary);">Reset Your Password</p>
+                                <p class="text-xs" style="color: var(--text-secondary);">Enter your email address and we'll send you a password reset link.</p>
+                                <input type="email" id="reset-email" placeholder="Email" class="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-purple-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
+                                <div class="flex gap-2">
+                                    <button onclick="handlePasswordReset()" class="flex-1 bg-purple-600 text-white py-3 rounded-xl font-bold text-xs hover:bg-purple-700 transition-colors">Send Reset Link</button>
+                                    <button onclick="toggleForgotPassword()" class="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-xs hover:bg-gray-200 transition-colors" style="background-color: var(--bg-tertiary); color: var(--text-primary);">Cancel</button>
+                                </div>
+                            </div>
                             <div class="flex gap-3">
                                 <button onclick="handleEmailSignIn()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
                                 <button onclick="handleEmailSignUp()" class="flex-1 bg-gray-100 py-4 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-colors" style="background-color: var(--bg-tertiary); color: var(--text-primary);">Sign Up</button>
@@ -1597,6 +1627,7 @@
             GoogleAuthProvider,
             signInWithPhoneNumber,
             RecaptchaVerifier,
+            sendPasswordResetEmail,
             signOut,
             onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -1671,6 +1702,15 @@
             }
         };
 
+        window.firebaseResetPassword = async (email) => {
+            try {
+                await sendPasswordResetEmail(auth, email);
+                return { success: true };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        };
+
         // Phone authentication functions
         window.firebaseRecaptchaVerifier = null;
         window.firebaseConfirmationResult = null;
@@ -1710,7 +1750,16 @@
                     window.firebaseRecaptchaVerifier.clear();
                     window.firebaseRecaptchaVerifier = null;
                 }
-                return { success: false, error: error.message };
+                // Provide helpful error message for common phone auth issues
+                let errorMsg = error.message;
+                if (error.code === 'auth/operation-not-allowed' || errorMsg.includes('billing') || errorMsg.includes('not enabled')) {
+                    errorMsg = 'Phone authentication is not enabled. Please enable it in Firebase Console → Authentication → Sign-in method → Phone.';
+                } else if (error.code === 'auth/invalid-phone-number') {
+                    errorMsg = 'Invalid phone number format. Please check the number and try again.';
+                } else if (error.code === 'auth/quota-exceeded') {
+                    errorMsg = 'SMS quota exceeded. Please try again later or contact support.';
+                }
+                return { success: false, error: errorMsg };
             }
         };
 
@@ -2049,34 +2098,50 @@
                         }
                     }
                     
-                    // Strategy 3: Try matching with leading zeros removed
+                    // Strategy 3: Try matching with leading zeros removed (both ways)
                     if (!item && normalizedCode.length > 0) {
                         const codeWithoutLeadingZeros = normalizedCode.replace(/^0+/, '');
-                        if (codeWithoutLeadingZeros !== normalizedCode) {
-                            item = stock.find(s => s.barcode && s.barcode.toString().trim().replace(/^0+/, '') === codeWithoutLeadingZeros);
+                        if (codeWithoutLeadingZeros !== normalizedCode && codeWithoutLeadingZeros.length > 0) {
+                            item = stock.find(s => {
+                                if (!s.barcode) return false;
+                                const storedBarcode = s.barcode.toString().trim();
+                                const storedWithoutZeros = storedBarcode.replace(/^0+/, '');
+                                return storedWithoutZeros === codeWithoutLeadingZeros || storedBarcode === codeWithoutLeadingZeros;
+                            });
                         }
                     }
                     
-                    // Strategy 4: Try exact product name match
+                    // Strategy 4: Try matching by substring (check if barcodes are contained in each other)
+                    if (!item && normalizedCode.length > 0 && !isNaN(normalizedCode)) {
+                        item = stock.find(s => {
+                            if (!s.barcode) return false;
+                            const storedBarcode = s.barcode.toString().trim();
+                            // Check if stored barcode ends with the scanned code or vice versa
+                            return storedBarcode.endsWith(normalizedCode) || normalizedCode.endsWith(storedBarcode);
+                        });
+                    }
+                    
+                    // Strategy 5: Try exact product name match
                     if (!item) {
                         item = stock.find(s => s.name && s.name.trim().toLowerCase() === normalizedCode.toLowerCase());
                     }
                     
-                    // Strategy 5: Try partial product name match
+                    // Strategy 6: Try partial product name match
                     if (!item) {
                         item = stock.find(s => s.name && (s.name.toLowerCase().includes(normalizedCode.toLowerCase()) || normalizedCode.toLowerCase().includes(s.name.toLowerCase())));
                     }
                     
                     if (item) {
                         addItemRowWithData(item.name, item.price);
-                        showToast(`Added: ${item.name} (₹${item.price.toFixed(2)})`);
+                        showToast(`✅ Added: ${item.name} (₹${item.price.toFixed(2)})`);
                         stopScanner();
                     } else {
                         // Debug: show available barcodes
                         const barcodes = stock.filter(s => s.barcode).map(s => ({ name: s.name, barcode: s.barcode.toString() }));
                         console.log('Scanned code:', normalizedCode);
                         console.log('Available barcodes:', barcodes);
-                        showToast(`Product not found. Scanned: ${normalizedCode}`);
+                        console.log('Total stock items:', stock.length, 'Items with barcodes:', barcodes.length);
+                        showToast(`❌ Product not found. Scanned: ${normalizedCode}. Try scanning again or add product to stock first.`);
                         stopScanner();
                     }
                 });
@@ -2365,12 +2430,18 @@
                 bar.style.height = `${barHeight}px`;
                 bar.title = `₹${value.toFixed(2)}`;
                 
+                // Add value label on top of bar
+                const valueLabel = document.createElement('div');
+                valueLabel.className = 'bar-value';
+                valueLabel.textContent = value > 0 ? `₹${value.toFixed(0)}` : '';
+                
                 const barLabel = document.createElement('div');
                 barLabel.className = 'bar-label';
                 barLabel.textContent = daysRange <= 30 ? 
                     new Date(label).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : 
                     label;
                 
+                barContainer.appendChild(valueLabel);
                 barContainer.appendChild(bar);
                 barContainer.appendChild(barLabel);
                 chartContainer.appendChild(barContainer);
@@ -2420,14 +2491,15 @@
                 });
             }
             
-            // Calculate SVG width based on data points - ensure minimum spacing
-            const minWidth = 400;
-            const pointSpacing = 25; // Minimum pixels per data point
+            // Calculate SVG width based on data points - ensure better spacing
+            const minWidth = 600;
+            const pointSpacing = 35; // Increased spacing per data point
             const calculatedWidth = Math.max(minWidth, 40 + (dataPoints.length * pointSpacing) + 40);
             
             svg.setAttribute("width", calculatedWidth);
             svg.setAttribute("height", "200");
             svg.setAttribute("viewBox", `0 0 ${calculatedWidth} 200`);
+            svg.style.minWidth = `${calculatedWidth}px`;
             
             const counts = dataPoints.map(dp => dp.count);
             const maxCount = Math.max(...counts, 1);
@@ -2487,7 +2559,7 @@
                 text.setAttribute("x", x);
                 text.setAttribute("y", "195");
                 text.setAttribute("text-anchor", "middle");
-                text.setAttribute("font-size", "10");
+                text.setAttribute("font-size", "9");
                 text.setAttribute("fill", "#6b7280");
                 
                 if (daysRange <= 30) {
@@ -4099,8 +4171,21 @@
                 showToast('✅ Signed in successfully!');
                 document.getElementById('auth-email').value = '';
                 document.getElementById('auth-password').value = '';
+                document.getElementById('password-requirements')?.classList.add('hidden');
             } else {
-                showToast('❌ Sign in failed: ' + result.error);
+                if (result.error.includes('user-not-found')) {
+                    showToast('❌ No account found with this email. Try signing up first.');
+                } else if (result.error.includes('wrong-password')) {
+                    showToast('❌ Incorrect password. Try again or use "Forgot Password".');
+                } else if (result.error.includes('invalid-email')) {
+                    showToast('❌ Invalid email address format');
+                } else if (result.error.includes('user-disabled')) {
+                    showToast('❌ This account has been disabled');
+                } else if (result.error.includes('too-many-requests')) {
+                    showToast('❌ Too many failed attempts. Try again later or reset your password.');
+                } else {
+                    showToast('❌ Sign in failed: ' + result.error);
+                }
             }
         }
         
@@ -4115,8 +4200,21 @@
                 return;
             }
             
-            if (password.length < 6) {
-                showToast('Password must be at least 6 characters');
+            // Validate password requirements
+            const requirements = validatePassword(password);
+            
+            if (!requirements.length) {
+                showToast('❌ Password must be at least 6 characters');
+                return;
+            }
+            
+            if (!requirements.letter) {
+                showToast('❌ Password must contain at least one letter');
+                return;
+            }
+            
+            if (!requirements.number) {
+                showToast('❌ Password must contain at least one number');
                 return;
             }
             
@@ -4127,12 +4225,125 @@
                 showToast('✅ Account created successfully!');
                 document.getElementById('auth-email').value = '';
                 document.getElementById('auth-password').value = '';
+                document.getElementById('password-requirements')?.classList.add('hidden');
             } else {
-                showToast('❌ Sign up failed: ' + result.error);
+                if (result.error.includes('email-already-in-use')) {
+                    showToast('❌ This email is already registered. Try signing in or resetting your password.');
+                } else if (result.error.includes('invalid-email')) {
+                    showToast('❌ Invalid email address format');
+                } else if (result.error.includes('weak-password')) {
+                    showToast('❌ Password is too weak. Use a stronger password.');
+                } else {
+                    showToast('❌ Sign up failed: ' + result.error);
+                }
             }
         }
         
         window.handleEmailSignUp = handleEmailSignUp;
+
+        function toggleForgotPassword() {
+            const forgotForm = document.getElementById('forgot-password-form');
+            const isHidden = forgotForm?.classList.contains('hidden');
+            if (isHidden) {
+                forgotForm?.classList.remove('hidden');
+            } else {
+                forgotForm?.classList.add('hidden');
+                document.getElementById('reset-email').value = '';
+            }
+        }
+
+        window.toggleForgotPassword = toggleForgotPassword;
+
+        async function handlePasswordReset() {
+            const email = document.getElementById('reset-email').value.trim();
+            
+            if (!email) {
+                showToast('Please enter your email address');
+                return;
+            }
+            
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showToast('Please enter a valid email address');
+                return;
+            }
+            
+            showToast('Sending password reset email...');
+            const result = await window.firebaseResetPassword(email);
+            
+            if (result.success) {
+                showToast('✅ Password reset email sent! Check your inbox.');
+                document.getElementById('reset-email').value = '';
+                toggleForgotPassword();
+            } else {
+                if (result.error.includes('user-not-found')) {
+                    showToast('❌ No account found with this email address');
+                } else if (result.error.includes('invalid-email')) {
+                    showToast('❌ Invalid email address');
+                } else if (result.error.includes('too-many-requests')) {
+                    showToast('❌ Too many attempts. Please try again later.');
+                } else {
+                    showToast('❌ Failed to send reset email: ' + result.error);
+                }
+            }
+        }
+
+        window.handlePasswordReset = handlePasswordReset;
+
+        // Password validation with visual feedback
+        function validatePassword(password) {
+            const requirements = {
+                length: password.length >= 6,
+                letter: /[a-zA-Z]/.test(password),
+                number: /[0-9]/.test(password)
+            };
+            
+            return requirements;
+        }
+
+        function updatePasswordRequirements(password) {
+            const reqDiv = document.getElementById('password-requirements');
+            if (!reqDiv) return;
+            
+            if (password.length > 0) {
+                reqDiv.classList.remove('hidden');
+                
+                const requirements = validatePassword(password);
+                
+                // Update each requirement indicator
+                const lengthEl = document.getElementById('req-length');
+                const letterEl = document.getElementById('req-letter');
+                const numberEl = document.getElementById('req-number');
+                
+                if (lengthEl) {
+                    lengthEl.style.color = requirements.length ? '#10b981' : 'var(--text-secondary)';
+                    lengthEl.innerHTML = requirements.length ? '✅ At least 6 characters' : 'At least 6 characters';
+                }
+                if (letterEl) {
+                    letterEl.style.color = requirements.letter ? '#10b981' : 'var(--text-secondary)';
+                    letterEl.innerHTML = requirements.letter ? '✅ Contains a letter' : 'Contains a letter';
+                }
+                if (numberEl) {
+                    numberEl.style.color = requirements.number ? '#10b981' : 'var(--text-secondary)';
+                    numberEl.innerHTML = requirements.number ? '✅ Contains a number' : 'Contains a number';
+                }
+            } else {
+                reqDiv.classList.add('hidden');
+            }
+        }
+
+        window.updatePasswordRequirements = updatePasswordRequirements;
+
+        // Add event listener to password field
+        document.addEventListener('DOMContentLoaded', () => {
+            const passwordField = document.getElementById('auth-password');
+            if (passwordField) {
+                passwordField.addEventListener('input', (e) => {
+                    updatePasswordRequirements(e.target.value);
+                });
+            }
+        });
 
         async function handleGoogleSignIn() {
             showToast('Opening Google sign in...');
