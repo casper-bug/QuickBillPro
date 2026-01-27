@@ -1470,8 +1470,32 @@
                         <div id="phone-signin-form" class="space-y-3 hidden">
                             <div id="recaptcha-container"></div>
                             <div id="phone-input-step">
-                                <input type="tel" id="auth-phone" placeholder="Phone Number (e.g., +1234567890)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
-                                <p class="text-xs mt-2" style="color: var(--text-tertiary);">Include country code (e.g., +1 for US, +91 for India)</p>
+                                <div class="flex gap-2">
+                                    <select id="auth-country-code" class="p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary); width: 120px;">
+                                        <option value="+1">🇺🇸 +1</option>
+                                        <option value="+44">🇬🇧 +44</option>
+                                        <option value="+91">🇮🇳 +91</option>
+                                        <option value="+86">🇨🇳 +86</option>
+                                        <option value="+81">🇯🇵 +81</option>
+                                        <option value="+49">🇩🇪 +49</option>
+                                        <option value="+33">🇫🇷 +33</option>
+                                        <option value="+39">🇮🇹 +39</option>
+                                        <option value="+34">🇪🇸 +34</option>
+                                        <option value="+7">🇷🇺 +7</option>
+                                        <option value="+61">🇦🇺 +61</option>
+                                        <option value="+55">🇧🇷 +55</option>
+                                        <option value="+52">🇲🇽 +52</option>
+                                        <option value="+82">🇰🇷 +82</option>
+                                        <option value="+31">🇳🇱 +31</option>
+                                        <option value="+46">🇸🇪 +46</option>
+                                        <option value="+41">🇨🇭 +41</option>
+                                        <option value="+971">🇦🇪 +971</option>
+                                        <option value="+65">🇸🇬 +65</option>
+                                        <option value="+27">🇿🇦 +27</option>
+                                    </select>
+                                    <input type="tel" id="auth-phone" placeholder="Phone Number (without country code)" class="flex-1 p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
+                                </div>
+                                <p class="text-xs mt-2" style="color: var(--text-tertiary);">Select your country code and enter phone number</p>
                                 <button onclick="handlePhoneSendCode()" id="phone-send-btn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors mt-3">Send Code</button>
                             </div>
                             <div id="phone-verify-step" class="hidden">
@@ -1653,6 +1677,12 @@
                         console.log('reCAPTCHA expired');
                         window.firebaseRecaptchaVerifier = null;
                     }
+                });
+                // Explicitly render the reCAPTCHA
+                window.firebaseRecaptchaVerifier.render().then((widgetId) => {
+                    console.log('reCAPTCHA rendered with widget ID:', widgetId);
+                }).catch((error) => {
+                    console.error('reCAPTCHA render error:', error);
                 });
             }
             return window.firebaseRecaptchaVerifier;
@@ -1955,6 +1985,15 @@
         
         function startScanner() {
             if (isScannerActive) return;
+            
+            // Ensure stock is loaded
+            if (!stock || stock.length === 0) {
+                showToast('No products in stock. Please add products to inventory first.');
+                return;
+            }
+            
+            console.log('Starting scanner with', stock.length, 'products in stock');
+            
             isScannerActive = true;
             document.getElementById('scanner-overlay').style.display = 'flex';
             
@@ -3961,6 +4000,7 @@
         window.switchAuthTab = switchAuthTab;
 
         async function handlePhoneSendCode() {
+            const countryCode = document.getElementById('auth-country-code').value;
             const phoneNumber = document.getElementById('auth-phone').value.trim();
             
             if (!phoneNumber) {
@@ -3968,21 +4008,19 @@
                 return;
             }
             
-            if (!phoneNumber.startsWith('+')) {
-                showToast('Phone number must include country code (e.g., +1234567890)');
-                return;
-            }
+            // Combine country code with phone number
+            const fullPhoneNumber = countryCode + phoneNumber;
             
             const sendBtn = document.getElementById('phone-send-btn');
             if (sendBtn) sendBtn.disabled = true;
             
             showToast('Sending verification code...');
-            const result = await window.firebaseSendPhoneCode(phoneNumber);
+            const result = await window.firebaseSendPhoneCode(fullPhoneNumber);
             
             if (sendBtn) sendBtn.disabled = false;
             
             if (result.success) {
-                showToast('✅ Code sent to ' + phoneNumber);
+                showToast('✅ Code sent to ' + fullPhoneNumber);
                 // Show verification step
                 document.getElementById('phone-input-step')?.classList.add('hidden');
                 document.getElementById('phone-verify-step')?.classList.remove('hidden');
