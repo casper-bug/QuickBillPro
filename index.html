@@ -543,6 +543,13 @@
             text-overflow: ellipsis;
         }
         
+        .bar-value {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+        
         .simple-line-chart {
             position: relative;
             height: 200px;
@@ -2076,12 +2083,12 @@
                         }
                     }
                     
-                    // Strategy 4: Try matching by adding leading zeros if scanned code is shorter
+                    // Strategy 4: Try matching by substring (check if barcodes are contained in each other)
                     if (!item && normalizedCode.length > 0 && !isNaN(normalizedCode)) {
                         item = stock.find(s => {
                             if (!s.barcode) return false;
                             const storedBarcode = s.barcode.toString().trim();
-                            // Check if stored barcode ends with the scanned code
+                            // Check if stored barcode ends with the scanned code or vice versa
                             return storedBarcode.endsWith(normalizedCode) || normalizedCode.endsWith(storedBarcode);
                         });
                     }
@@ -2397,7 +2404,7 @@
                 
                 // Add value label on top of bar
                 const valueLabel = document.createElement('div');
-                valueLabel.style.cssText = 'font-size: 0.65rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;';
+                valueLabel.className = 'bar-value';
                 valueLabel.textContent = value > 0 ? `₹${value.toFixed(0)}` : '';
                 
                 const barLabel = document.createElement('div');
