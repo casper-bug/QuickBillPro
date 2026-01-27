@@ -1446,6 +1446,12 @@
                             <p class="text-xs" style="color: var(--text-secondary);">You're using local storage only. Sign in to sync data across devices.</p>
                         </div>
                         
+                        <!-- Auth Method Tabs -->
+                        <div class="flex gap-2 p-1 rounded-2xl" style="background-color: var(--bg-tertiary);">
+                            <button id="tab-email" onclick="switchAuthTab('email')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors" style="background-color: var(--bg-secondary); color: var(--text-primary);">Email</button>
+                            <button id="tab-phone" onclick="switchAuthTab('phone')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors" style="color: var(--text-secondary);">Phone</button>
+                        </div>
+                        
                         <!-- Email Sign In Form -->
                         <div id="email-signin-form" class="space-y-3">
                             <input type="email" id="auth-email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
@@ -1453,6 +1459,23 @@
                             <div class="flex gap-3">
                                 <button onclick="handleEmailSignIn()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
                                 <button onclick="handleEmailSignUp()" class="flex-1 bg-gray-100 py-4 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-colors" style="background-color: var(--bg-tertiary); color: var(--text-primary);">Sign Up</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Phone Sign In Form -->
+                        <div id="phone-signin-form" class="space-y-3 hidden">
+                            <div id="recaptcha-container"></div>
+                            <div id="phone-input-step">
+                                <input type="tel" id="auth-phone" placeholder="Phone Number (e.g., +1234567890)" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
+                                <p class="text-xs mt-2" style="color: var(--text-tertiary);">Include country code (e.g., +1 for US, +91 for India)</p>
+                                <button onclick="handlePhoneSendCode()" id="phone-send-btn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors mt-3">Send Code</button>
+                            </div>
+                            <div id="phone-verify-step" class="hidden">
+                                <input type="text" id="auth-verification-code" placeholder="Enter 6-digit code" maxlength="6" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
+                                <div class="flex gap-3 mt-3">
+                                    <button onclick="handlePhoneVerifyCode()" class="flex-1 bg-green-600 text-white py-4 rounded-2xl font-bold text-sm hover:bg-green-700 transition-colors">Verify</button>
+                                    <button onclick="cancelPhoneVerification()" class="flex-1 bg-gray-100 py-4 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-colors" style="background-color: var(--bg-tertiary); color: var(--text-primary);">Cancel</button>
+                                </div>
                             </div>
                         </div>
                         
@@ -1535,6 +1558,8 @@
             createUserWithEmailAndPassword,
             signInWithPopup,
             GoogleAuthProvider,
+            signInWithPhoneNumber,
+            RecaptchaVerifier,
             signOut,
             onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -1605,6 +1630,56 @@
                 await signOut(auth);
                 return { success: true };
             } catch (error) {
+                return { success: false, error: error.message };
+            }
+        };
+
+        // Phone authentication functions
+        window.firebaseRecaptchaVerifier = null;
+        window.firebaseConfirmationResult = null;
+
+        window.initRecaptcha = () => {
+            if (!window.firebaseRecaptchaVerifier) {
+                window.firebaseRecaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+                    'size': 'normal',
+                    'callback': (response) => {
+                        console.log('reCAPTCHA solved');
+                    },
+                    'expired-callback': () => {
+                        console.log('reCAPTCHA expired');
+                        window.firebaseRecaptchaVerifier = null;
+                    }
+                });
+            }
+            return window.firebaseRecaptchaVerifier;
+        };
+
+        window.firebaseSendPhoneCode = async (phoneNumber) => {
+            try {
+                const recaptchaVerifier = window.initRecaptcha();
+                const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+                window.firebaseConfirmationResult = confirmationResult;
+                return { success: true };
+            } catch (error) {
+                console.error('Phone send error:', error);
+                // Reset reCAPTCHA on error
+                if (window.firebaseRecaptchaVerifier) {
+                    window.firebaseRecaptchaVerifier.clear();
+                    window.firebaseRecaptchaVerifier = null;
+                }
+                return { success: false, error: error.message };
+            }
+        };
+
+        window.firebaseVerifyPhoneCode = async (code) => {
+            try {
+                if (!window.firebaseConfirmationResult) {
+                    return { success: false, error: 'No confirmation result. Please send code first.' };
+                }
+                const result = await window.firebaseConfirmationResult.confirm(code);
+                return { success: true, user: result.user };
+            } catch (error) {
+                console.error('Phone verify error:', error);
                 return { success: false, error: error.message };
             }
         };
@@ -3838,12 +3913,108 @@
                 demoMode?.classList.add('hidden');
                 loggedInMode?.classList.remove('hidden');
                 if (userEmailEl) {
-                    userEmailEl.textContent = user.email || 'Signed in with Google';
+                    userEmailEl.textContent = user.email || user.phoneNumber || 'Signed in';
                 }
             }
         }
         
         window.updateAuthUI = updateAuthUI;
+
+        function switchAuthTab(tab) {
+            const emailForm = document.getElementById('email-signin-form');
+            const phoneForm = document.getElementById('phone-signin-form');
+            const emailTab = document.getElementById('tab-email');
+            const phoneTab = document.getElementById('tab-phone');
+            
+            if (tab === 'email') {
+                emailForm?.classList.remove('hidden');
+                phoneForm?.classList.add('hidden');
+                emailTab?.style.setProperty('background-color', 'var(--bg-secondary)');
+                emailTab?.style.setProperty('color', 'var(--text-primary)');
+                phoneTab?.style.removeProperty('background-color');
+                phoneTab?.style.setProperty('color', 'var(--text-secondary)');
+            } else if (tab === 'phone') {
+                emailForm?.classList.add('hidden');
+                phoneForm?.classList.remove('hidden');
+                phoneTab?.style.setProperty('background-color', 'var(--bg-secondary)');
+                phoneTab?.style.setProperty('color', 'var(--text-primary)');
+                emailTab?.style.removeProperty('background-color');
+                emailTab?.style.setProperty('color', 'var(--text-secondary)');
+                
+                // Initialize reCAPTCHA when switching to phone tab
+                setTimeout(() => {
+                    if (window.initRecaptcha) {
+                        try {
+                            window.initRecaptcha();
+                        } catch (e) {
+                            console.log('reCAPTCHA init error:', e);
+                        }
+                    }
+                }, 100);
+            }
+        }
+
+        async function handlePhoneSendCode() {
+            const phoneNumber = document.getElementById('auth-phone').value.trim();
+            
+            if (!phoneNumber) {
+                showToast('Please enter phone number');
+                return;
+            }
+            
+            if (!phoneNumber.startsWith('+')) {
+                showToast('Phone number must include country code (e.g., +1234567890)');
+                return;
+            }
+            
+            const sendBtn = document.getElementById('phone-send-btn');
+            if (sendBtn) sendBtn.disabled = true;
+            
+            showToast('Sending verification code...');
+            const result = await window.firebaseSendPhoneCode(phoneNumber);
+            
+            if (sendBtn) sendBtn.disabled = false;
+            
+            if (result.success) {
+                showToast('✅ Code sent to ' + phoneNumber);
+                // Show verification step
+                document.getElementById('phone-input-step')?.classList.add('hidden');
+                document.getElementById('phone-verify-step')?.classList.remove('hidden');
+            } else {
+                showToast('❌ Failed to send code: ' + result.error);
+            }
+        }
+
+        async function handlePhoneVerifyCode() {
+            const code = document.getElementById('auth-verification-code').value.trim();
+            
+            if (!code || code.length !== 6) {
+                showToast('Please enter 6-digit verification code');
+                return;
+            }
+            
+            showToast('Verifying code...');
+            const result = await window.firebaseVerifyPhoneCode(code);
+            
+            if (result.success) {
+                showToast('✅ Phone verified successfully!');
+                // Reset form
+                document.getElementById('auth-phone').value = '';
+                document.getElementById('auth-verification-code').value = '';
+                document.getElementById('phone-verify-step')?.classList.add('hidden');
+                document.getElementById('phone-input-step')?.classList.remove('hidden');
+            } else {
+                showToast('❌ Verification failed: ' + result.error);
+            }
+        }
+
+        function cancelPhoneVerification() {
+            document.getElementById('auth-verification-code').value = '';
+            document.getElementById('phone-verify-step')?.classList.add('hidden');
+            document.getElementById('phone-input-step')?.classList.remove('hidden');
+            window.firebaseConfirmationResult = null;
+            showToast('Verification cancelled');
+        }
 
         async function handleEmailSignIn() {
             const email = document.getElementById('auth-email').value.trim();
