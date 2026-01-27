@@ -2029,9 +2029,9 @@
                 // Set up detection handler after initialization
                 Quagga.onDetected(function(data) {
                     if (!isScannerActive) return;
-            const code = data.codeResult.code;
-            console.log('Scanned barcode:', code);
-            
+                    const code = data.codeResult.code;
+                    console.log('Scanned barcode:', code);
+                    
                     // Normalize the scanned code (remove whitespace, convert to string)
                     const normalizedCode = code.toString().trim();
                     
@@ -2070,7 +2070,7 @@
                     if (item) {
                         addItemRowWithData(item.name, item.price);
                         showToast(`Added: ${item.name} (₹${item.price.toFixed(2)})`);
-            stopScanner();
+                        stopScanner();
                     } else {
                         // Debug: show available barcodes
                         const barcodes = stock.filter(s => s.barcode).map(s => ({ name: s.name, barcode: s.barcode.toString() }));
@@ -4291,14 +4291,14 @@
             showToast("All data exported successfully!");
         }
 
-        document.getElementById('import-file-input').addEventListener('change', (event) => {
+        document.getElementById('import-file-input').addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (!file) {
                 return;
             }
 
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
                     const importedData = JSON.parse(e.target.result);
 
@@ -4313,40 +4313,103 @@
                         return;
                     }
 
-                    companyDetails = {
-                        gstNumber: '',
-                        defaultBillNotes: '',
-                        ...importedData.companyDetails
-                    };
+                    // Check if user has existing data
+                    const hasExistingData = orders.length > 0 || completedOrders.length > 0 || stock.length > 0 || notes.length > 0;
+                    
+                    let shouldReplace = true;
+                    if (hasExistingData) {
+                        shouldReplace = await showConfirmation("You have existing data. Do you want to REPLACE all existing data with imported data? Click 'No' to MERGE imported data with existing data.");
+                    }
 
-                    const processedImportedOrders = importedData.orders.map(order => ({
-                        ...order,
-                        orderDate: order.orderDate ? new Date(order.orderDate) : new Date()
-                    }));
-                    orders = processedImportedOrders.filter(order => !order.isDelivered);
-                    completedOrders = processedImportedOrders.filter(order => order.isDelivered);
-                    orders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
-                    completedOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+                    if (shouldReplace) {
+                        // Replace mode - overwrite all data
+                        companyDetails = {
+                            gstNumber: '',
+                            defaultBillNotes: '',
+                            ...importedData.companyDetails
+                        };
 
-                    const processedImportedNotes = importedData.notes.map(note => ({
-                        ...note,
-                        createdAt: note.createdAt ? new Date(note.createdAt) : new Date()
-                    }));
-                    notes = processedImportedNotes;
-                    notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                        const processedImportedOrders = importedData.orders.map(order => ({
+                            ...order,
+                            orderDate: order.orderDate ? new Date(order.orderDate) : new Date()
+                        }));
+                        orders = processedImportedOrders.filter(order => !order.isDelivered);
+                        completedOrders = processedImportedOrders.filter(order => order.isDelivered);
+                        orders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+                        completedOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 
-                    stock = importedData.stock.map(item => ({
-                        ...item,
-                        price: parseFloat(item.price)
-                    }));
-                    stock.sort((a, b) => a.name.localeCompare(b.name));
+                        const processedImportedNotes = importedData.notes.map(note => ({
+                            ...note,
+                            createdAt: note.createdAt ? new Date(note.createdAt) : new Date()
+                        }));
+                        notes = processedImportedNotes;
+                        notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                        stock = importedData.stock.map(item => ({
+                            ...item,
+                            price: parseFloat(item.price)
+                        }));
+                        stock.sort((a, b) => a.name.localeCompare(b.name));
+                        
+                        showToast("Data replaced successfully!");
+                    } else {
+                        // Merge mode - combine imported data with existing data
+                        companyDetails = {
+                            ...companyDetails,
+                            ...importedData.companyDetails
+                        };
+
+                        const processedImportedOrders = importedData.orders.map(order => ({
+                            ...order,
+                            orderDate: order.orderDate ? new Date(order.orderDate) : new Date()
+                        }));
+                        
+                        // Merge orders - avoid duplicates by ID
+                        const existingOrderIds = new Set([...orders, ...completedOrders].map(o => o.id));
+                        const newOrders = processedImportedOrders.filter(order => !existingOrderIds.has(order.id));
+                        
+                        orders = [...orders, ...newOrders.filter(order => !order.isDelivered)];
+                        completedOrders = [...completedOrders, ...newOrders.filter(order => order.isDelivered)];
+                        orders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+                        completedOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+
+                        // Merge notes - avoid duplicates by ID
+                        const processedImportedNotes = importedData.notes.map(note => ({
+                            ...note,
+                            createdAt: note.createdAt ? new Date(note.createdAt) : new Date()
+                        }));
+                        const existingNoteIds = new Set(notes.map(n => n.id));
+                        const newNotes = processedImportedNotes.filter(note => !existingNoteIds.has(note.id));
+                        notes = [...notes, ...newNotes];
+                        notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+                        // Merge stock - avoid duplicates by ID, update existing items
+                        const importedStock = importedData.stock.map(item => ({
+                            ...item,
+                            price: parseFloat(item.price)
+                        }));
+                        
+                        const stockMap = new Map(stock.map(item => [item.id, item]));
+                        importedStock.forEach(item => {
+                            if (stockMap.has(item.id)) {
+                                // Update existing item
+                                stockMap.set(item.id, item);
+                            } else {
+                                // Add new item
+                                stockMap.set(item.id, item);
+                            }
+                        });
+                        stock = Array.from(stockMap.values());
+                        stock.sort((a, b) => a.name.localeCompare(b.name));
+                        
+                        showToast("Data merged successfully!");
+                    }
 
                     saveDataToLocalStorage('companyDetails', companyDetails);
                     saveDataToLocalStorage('orders', [...orders, ...completedOrders]);
                     saveDataToLocalStorage('notes', notes);
                     saveDataToLocalStorage('stock', stock);
 
-                    showToast("Data imported successfully!");
                     renderSettings();
                     renderAllOrders();
                     renderNotes();
