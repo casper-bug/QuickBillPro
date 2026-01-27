@@ -510,10 +510,11 @@
             display: flex;
             align-items: flex-end;
             height: 200px;
-            gap: 0.5rem;
+            gap: 1rem;
             padding: 1rem 0;
             overflow-x: auto;
-            overflow-y: visible;
+            overflow-y: hidden;
+            min-width: 100%;
         }
         
         .bar-container {
@@ -521,7 +522,7 @@
             flex-direction: column;
             align-items: center;
             flex: 0 0 auto;
-            min-width: 40px;
+            min-width: 50px;
         }
         
         .bar {
@@ -533,9 +534,13 @@
         
         .bar-label {
             margin-top: 0.5rem;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             text-align: center;
             color: var(--text-secondary);
+            white-space: nowrap;
+            max-width: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .simple-line-chart {
@@ -543,7 +548,7 @@
             height: 200px;
             width: 100%;
             overflow-x: auto;
-            overflow-y: visible;
+            overflow-y: hidden;
         }
         
         .chart-grid-line {
@@ -1710,7 +1715,16 @@
                     window.firebaseRecaptchaVerifier.clear();
                     window.firebaseRecaptchaVerifier = null;
                 }
-                return { success: false, error: error.message };
+                // Provide helpful error message for common phone auth issues
+                let errorMsg = error.message;
+                if (error.code === 'auth/operation-not-allowed' || errorMsg.includes('billing') || errorMsg.includes('not enabled')) {
+                    errorMsg = 'Phone authentication is not enabled. Please enable it in Firebase Console → Authentication → Sign-in method → Phone.';
+                } else if (error.code === 'auth/invalid-phone-number') {
+                    errorMsg = 'Invalid phone number format. Please check the number and try again.';
+                } else if (error.code === 'auth/quota-exceeded') {
+                    errorMsg = 'SMS quota exceeded. Please try again later or contact support.';
+                }
+                return { success: false, error: errorMsg };
             }
         };
 
@@ -2049,34 +2063,50 @@
                         }
                     }
                     
-                    // Strategy 3: Try matching with leading zeros removed
+                    // Strategy 3: Try matching with leading zeros removed (both ways)
                     if (!item && normalizedCode.length > 0) {
                         const codeWithoutLeadingZeros = normalizedCode.replace(/^0+/, '');
-                        if (codeWithoutLeadingZeros !== normalizedCode) {
-                            item = stock.find(s => s.barcode && s.barcode.toString().trim().replace(/^0+/, '') === codeWithoutLeadingZeros);
+                        if (codeWithoutLeadingZeros !== normalizedCode && codeWithoutLeadingZeros.length > 0) {
+                            item = stock.find(s => {
+                                if (!s.barcode) return false;
+                                const storedBarcode = s.barcode.toString().trim();
+                                const storedWithoutZeros = storedBarcode.replace(/^0+/, '');
+                                return storedWithoutZeros === codeWithoutLeadingZeros || storedBarcode === codeWithoutLeadingZeros;
+                            });
                         }
                     }
                     
-                    // Strategy 4: Try exact product name match
+                    // Strategy 4: Try matching by adding leading zeros if scanned code is shorter
+                    if (!item && normalizedCode.length > 0 && !isNaN(normalizedCode)) {
+                        item = stock.find(s => {
+                            if (!s.barcode) return false;
+                            const storedBarcode = s.barcode.toString().trim();
+                            // Check if stored barcode ends with the scanned code
+                            return storedBarcode.endsWith(normalizedCode) || normalizedCode.endsWith(storedBarcode);
+                        });
+                    }
+                    
+                    // Strategy 5: Try exact product name match
                     if (!item) {
                         item = stock.find(s => s.name && s.name.trim().toLowerCase() === normalizedCode.toLowerCase());
                     }
                     
-                    // Strategy 5: Try partial product name match
+                    // Strategy 6: Try partial product name match
                     if (!item) {
                         item = stock.find(s => s.name && (s.name.toLowerCase().includes(normalizedCode.toLowerCase()) || normalizedCode.toLowerCase().includes(s.name.toLowerCase())));
                     }
                     
                     if (item) {
                         addItemRowWithData(item.name, item.price);
-                        showToast(`Added: ${item.name} (₹${item.price.toFixed(2)})`);
+                        showToast(`✅ Added: ${item.name} (₹${item.price.toFixed(2)})`);
                         stopScanner();
                     } else {
                         // Debug: show available barcodes
                         const barcodes = stock.filter(s => s.barcode).map(s => ({ name: s.name, barcode: s.barcode.toString() }));
                         console.log('Scanned code:', normalizedCode);
                         console.log('Available barcodes:', barcodes);
-                        showToast(`Product not found. Scanned: ${normalizedCode}`);
+                        console.log('Total stock items:', stock.length, 'Items with barcodes:', barcodes.length);
+                        showToast(`❌ Product not found. Scanned: ${normalizedCode}. Try scanning again or add product to stock first.`);
                         stopScanner();
                     }
                 });
@@ -2365,12 +2395,18 @@
                 bar.style.height = `${barHeight}px`;
                 bar.title = `₹${value.toFixed(2)}`;
                 
+                // Add value label on top of bar
+                const valueLabel = document.createElement('div');
+                valueLabel.style.cssText = 'font-size: 0.65rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;';
+                valueLabel.textContent = value > 0 ? `₹${value.toFixed(0)}` : '';
+                
                 const barLabel = document.createElement('div');
                 barLabel.className = 'bar-label';
                 barLabel.textContent = daysRange <= 30 ? 
                     new Date(label).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : 
                     label;
                 
+                barContainer.appendChild(valueLabel);
                 barContainer.appendChild(bar);
                 barContainer.appendChild(barLabel);
                 chartContainer.appendChild(barContainer);
@@ -2420,14 +2456,15 @@
                 });
             }
             
-            // Calculate SVG width based on data points - ensure minimum spacing
-            const minWidth = 400;
-            const pointSpacing = 25; // Minimum pixels per data point
+            // Calculate SVG width based on data points - ensure better spacing
+            const minWidth = 600;
+            const pointSpacing = 35; // Increased spacing per data point
             const calculatedWidth = Math.max(minWidth, 40 + (dataPoints.length * pointSpacing) + 40);
             
             svg.setAttribute("width", calculatedWidth);
             svg.setAttribute("height", "200");
             svg.setAttribute("viewBox", `0 0 ${calculatedWidth} 200`);
+            svg.style.minWidth = `${calculatedWidth}px`;
             
             const counts = dataPoints.map(dp => dp.count);
             const maxCount = Math.max(...counts, 1);
@@ -2487,7 +2524,7 @@
                 text.setAttribute("x", x);
                 text.setAttribute("y", "195");
                 text.setAttribute("text-anchor", "middle");
-                text.setAttribute("font-size", "10");
+                text.setAttribute("font-size", "9");
                 text.setAttribute("fill", "#6b7280");
                 
                 if (daysRange <= 30) {
