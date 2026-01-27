@@ -4318,7 +4318,7 @@
                     
                     let shouldReplace = true;
                     if (hasExistingData) {
-                        shouldReplace = await showConfirmation("You have existing data. Do you want to REPLACE all existing data with imported data? Click 'No' to MERGE imported data with existing data.");
+                        shouldReplace = await showConfirmation("You have existing data. Choose 'Yes' to REPLACE all data (existing data will be deleted) or 'No' to MERGE imported data with existing data (keeps both).");
                     }
 
                     if (shouldReplace) {
@@ -4365,8 +4365,8 @@
                         }));
                         
                         // Merge orders - avoid duplicates by ID
-                        const existingOrderIds = new Set([...orders, ...completedOrders].map(o => o.id));
-                        const newOrders = processedImportedOrders.filter(order => !existingOrderIds.has(order.id));
+                        const existingOrderIds = new Set([...orders, ...completedOrders].filter(o => o.id).map(o => o.id));
+                        const newOrders = processedImportedOrders.filter(order => order.id && !existingOrderIds.has(order.id));
                         
                         orders = [...orders, ...newOrders.filter(order => !order.isDelivered)];
                         completedOrders = [...completedOrders, ...newOrders.filter(order => order.isDelivered)];
@@ -4378,8 +4378,8 @@
                             ...note,
                             createdAt: note.createdAt ? new Date(note.createdAt) : new Date()
                         }));
-                        const existingNoteIds = new Set(notes.map(n => n.id));
-                        const newNotes = processedImportedNotes.filter(note => !existingNoteIds.has(note.id));
+                        const existingNoteIds = new Set(notes.filter(n => n.id).map(n => n.id));
+                        const newNotes = processedImportedNotes.filter(note => note.id && !existingNoteIds.has(note.id));
                         notes = [...notes, ...newNotes];
                         notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -4389,13 +4389,9 @@
                             price: parseFloat(item.price)
                         }));
                         
-                        const stockMap = new Map(stock.map(item => [item.id, item]));
+                        const stockMap = new Map(stock.filter(item => item.id).map(item => [item.id, item]));
                         importedStock.forEach(item => {
-                            if (stockMap.has(item.id)) {
-                                // Update existing item
-                                stockMap.set(item.id, item);
-                            } else {
-                                // Add new item
+                            if (item.id) {
                                 stockMap.set(item.id, item);
                             }
                         });
