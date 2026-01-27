@@ -3953,6 +3953,8 @@
                 }, 100);
             }
         }
+        
+        window.switchAuthTab = switchAuthTab;
 
         async function handlePhoneSendCode() {
             const phoneNumber = document.getElementById('auth-phone').value.trim();
@@ -3984,6 +3986,8 @@
                 showToast('❌ Failed to send code: ' + result.error);
             }
         }
+        
+        window.handlePhoneSendCode = handlePhoneSendCode;
 
         async function handlePhoneVerifyCode() {
             const code = document.getElementById('auth-verification-code').value.trim();
@@ -4007,6 +4011,8 @@
                 showToast('❌ Verification failed: ' + result.error);
             }
         }
+        
+        window.handlePhoneVerifyCode = handlePhoneVerifyCode;
 
         function cancelPhoneVerification() {
             document.getElementById('auth-verification-code').value = '';
@@ -4015,6 +4021,8 @@
             window.firebaseConfirmationResult = null;
             showToast('Verification cancelled');
         }
+        
+        window.cancelPhoneVerification = cancelPhoneVerification;
 
         async function handleEmailSignIn() {
             const email = document.getElementById('auth-email').value.trim();
@@ -4036,6 +4044,8 @@
                 showToast('❌ Sign in failed: ' + result.error);
             }
         }
+        
+        window.handleEmailSignIn = handleEmailSignIn;
 
         async function handleEmailSignUp() {
             const email = document.getElementById('auth-email').value.trim();
@@ -4062,6 +4072,8 @@
                 showToast('❌ Sign up failed: ' + result.error);
             }
         }
+        
+        window.handleEmailSignUp = handleEmailSignUp;
 
         async function handleGoogleSignIn() {
             showToast('Opening Google sign in...');
@@ -4073,6 +4085,8 @@
                 showToast('❌ Google sign in failed: ' + result.error);
             }
         }
+        
+        window.handleGoogleSignIn = handleGoogleSignIn;
 
         async function handleSignOut() {
             const confirmed = await showConfirmation('Are you sure you want to sign out? You can sign in again anytime to access your cloud data.');
@@ -4090,6 +4104,8 @@
                 showToast('❌ Sign out failed: ' + result.error);
             }
         }
+        
+        window.handleSignOut = handleSignOut;
 
         async function handleSyncData() {
             if (!window.firebaseUserId) {
@@ -4115,6 +4131,8 @@
                 showToast('❌ Sync failed: ' + result.error);
             }
         }
+        
+        window.handleSyncData = handleSyncData;
 
         async function handleLoadData() {
             if (!window.firebaseUserId) {
@@ -4141,6 +4159,8 @@
                 showToast(result.error === 'No data found' ? '📦 No cloud data found' : '❌ Load failed: ' + result.error);
             }
         }
+        
+        window.handleLoadData = handleLoadData;
 
         // --- Settings Page Logic ---
         function renderSettings() {
