@@ -1477,6 +1477,24 @@
                         <div id="email-signin-form" class="space-y-3">
                             <input type="email" id="auth-email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
                             <input type="password" id="auth-password" placeholder="Password" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
+                            <div id="password-requirements" class="hidden p-3 bg-blue-50 rounded-xl border border-blue-200 text-xs space-y-1" style="background-color: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3);">
+                                <p class="font-bold" style="color: var(--text-primary);">Password Requirements:</p>
+                                <ul class="list-disc list-inside space-y-0.5" style="color: var(--text-secondary);">
+                                    <li id="req-length">At least 6 characters</li>
+                                    <li id="req-letter">Contains a letter</li>
+                                    <li id="req-number">Contains a number</li>
+                                </ul>
+                            </div>
+                            <button onclick="toggleForgotPassword()" class="text-xs text-blue-600 hover:underline font-medium">Forgot Password?</button>
+                            <div id="forgot-password-form" class="hidden p-4 bg-purple-50 rounded-2xl border border-purple-200 space-y-3" style="background-color: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3);">
+                                <p class="text-xs font-bold" style="color: var(--text-primary);">Reset Your Password</p>
+                                <p class="text-xs" style="color: var(--text-secondary);">Enter your email address and we'll send you a password reset link.</p>
+                                <input type="email" id="reset-email" placeholder="Email" class="w-full p-3 bg-gray-50 rounded-xl outline-none focus:ring-2 focus:ring-purple-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
+                                <div class="flex gap-2">
+                                    <button onclick="handlePasswordReset()" class="flex-1 bg-purple-600 text-white py-3 rounded-xl font-bold text-xs hover:bg-purple-700 transition-colors">Send Reset Link</button>
+                                    <button onclick="toggleForgotPassword()" class="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-xs hover:bg-gray-200 transition-colors" style="background-color: var(--bg-tertiary); color: var(--text-primary);">Cancel</button>
+                                </div>
+                            </div>
                             <div class="flex gap-3">
                                 <button onclick="handleEmailSignIn()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
                                 <button onclick="handleEmailSignUp()" class="flex-1 bg-gray-100 py-4 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-colors" style="background-color: var(--bg-tertiary); color: var(--text-primary);">Sign Up</button>
@@ -1609,6 +1627,7 @@
             GoogleAuthProvider,
             signInWithPhoneNumber,
             RecaptchaVerifier,
+            sendPasswordResetEmail,
             signOut,
             onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -1677,6 +1696,15 @@
         window.firebaseSignOut = async () => {
             try {
                 await signOut(auth);
+                return { success: true };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        };
+
+        window.firebaseResetPassword = async (email) => {
+            try {
+                await sendPasswordResetEmail(auth, email);
                 return { success: true };
             } catch (error) {
                 return { success: false, error: error.message };
@@ -4143,8 +4171,21 @@
                 showToast('✅ Signed in successfully!');
                 document.getElementById('auth-email').value = '';
                 document.getElementById('auth-password').value = '';
+                document.getElementById('password-requirements')?.classList.add('hidden');
             } else {
-                showToast('❌ Sign in failed: ' + result.error);
+                if (result.error.includes('user-not-found')) {
+                    showToast('❌ No account found with this email. Try signing up first.');
+                } else if (result.error.includes('wrong-password')) {
+                    showToast('❌ Incorrect password. Try again or use "Forgot Password".');
+                } else if (result.error.includes('invalid-email')) {
+                    showToast('❌ Invalid email address format');
+                } else if (result.error.includes('user-disabled')) {
+                    showToast('❌ This account has been disabled');
+                } else if (result.error.includes('too-many-requests')) {
+                    showToast('❌ Too many failed attempts. Try again later or reset your password.');
+                } else {
+                    showToast('❌ Sign in failed: ' + result.error);
+                }
             }
         }
         
@@ -4159,8 +4200,21 @@
                 return;
             }
             
-            if (password.length < 6) {
-                showToast('Password must be at least 6 characters');
+            // Validate password requirements
+            const requirements = validatePassword(password);
+            
+            if (!requirements.length) {
+                showToast('❌ Password must be at least 6 characters');
+                return;
+            }
+            
+            if (!requirements.letter) {
+                showToast('❌ Password must contain at least one letter');
+                return;
+            }
+            
+            if (!requirements.number) {
+                showToast('❌ Password must contain at least one number');
                 return;
             }
             
@@ -4171,12 +4225,125 @@
                 showToast('✅ Account created successfully!');
                 document.getElementById('auth-email').value = '';
                 document.getElementById('auth-password').value = '';
+                document.getElementById('password-requirements')?.classList.add('hidden');
             } else {
-                showToast('❌ Sign up failed: ' + result.error);
+                if (result.error.includes('email-already-in-use')) {
+                    showToast('❌ This email is already registered. Try signing in or resetting your password.');
+                } else if (result.error.includes('invalid-email')) {
+                    showToast('❌ Invalid email address format');
+                } else if (result.error.includes('weak-password')) {
+                    showToast('❌ Password is too weak. Use a stronger password.');
+                } else {
+                    showToast('❌ Sign up failed: ' + result.error);
+                }
             }
         }
         
         window.handleEmailSignUp = handleEmailSignUp;
+
+        function toggleForgotPassword() {
+            const forgotForm = document.getElementById('forgot-password-form');
+            const isHidden = forgotForm?.classList.contains('hidden');
+            if (isHidden) {
+                forgotForm?.classList.remove('hidden');
+            } else {
+                forgotForm?.classList.add('hidden');
+                document.getElementById('reset-email').value = '';
+            }
+        }
+
+        window.toggleForgotPassword = toggleForgotPassword;
+
+        async function handlePasswordReset() {
+            const email = document.getElementById('reset-email').value.trim();
+            
+            if (!email) {
+                showToast('Please enter your email address');
+                return;
+            }
+            
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showToast('Please enter a valid email address');
+                return;
+            }
+            
+            showToast('Sending password reset email...');
+            const result = await window.firebaseResetPassword(email);
+            
+            if (result.success) {
+                showToast('✅ Password reset email sent! Check your inbox.');
+                document.getElementById('reset-email').value = '';
+                toggleForgotPassword();
+            } else {
+                if (result.error.includes('user-not-found')) {
+                    showToast('❌ No account found with this email address');
+                } else if (result.error.includes('invalid-email')) {
+                    showToast('❌ Invalid email address');
+                } else if (result.error.includes('too-many-requests')) {
+                    showToast('❌ Too many attempts. Please try again later.');
+                } else {
+                    showToast('❌ Failed to send reset email: ' + result.error);
+                }
+            }
+        }
+
+        window.handlePasswordReset = handlePasswordReset;
+
+        // Password validation with visual feedback
+        function validatePassword(password) {
+            const requirements = {
+                length: password.length >= 6,
+                letter: /[a-zA-Z]/.test(password),
+                number: /[0-9]/.test(password)
+            };
+            
+            return requirements;
+        }
+
+        function updatePasswordRequirements(password) {
+            const reqDiv = document.getElementById('password-requirements');
+            if (!reqDiv) return;
+            
+            if (password.length > 0) {
+                reqDiv.classList.remove('hidden');
+                
+                const requirements = validatePassword(password);
+                
+                // Update each requirement indicator
+                const lengthEl = document.getElementById('req-length');
+                const letterEl = document.getElementById('req-letter');
+                const numberEl = document.getElementById('req-number');
+                
+                if (lengthEl) {
+                    lengthEl.style.color = requirements.length ? '#10b981' : 'var(--text-secondary)';
+                    lengthEl.innerHTML = requirements.length ? '✅ At least 6 characters' : 'At least 6 characters';
+                }
+                if (letterEl) {
+                    letterEl.style.color = requirements.letter ? '#10b981' : 'var(--text-secondary)';
+                    letterEl.innerHTML = requirements.letter ? '✅ Contains a letter' : 'Contains a letter';
+                }
+                if (numberEl) {
+                    numberEl.style.color = requirements.number ? '#10b981' : 'var(--text-secondary)';
+                    numberEl.innerHTML = requirements.number ? '✅ Contains a number' : 'Contains a number';
+                }
+            } else {
+                reqDiv.classList.add('hidden');
+            }
+        }
+
+        window.updatePasswordRequirements = updatePasswordRequirements;
+
+        // Add event listener to password field
+        document.addEventListener('DOMContentLoaded', () => {
+            const passwordField = document.getElementById('auth-password');
+            if (passwordField) {
+                passwordField.addEventListener('input', (e) => {
+                    updatePasswordRequirements(e.target.value);
+                });
+            }
+        });
 
         async function handleGoogleSignIn() {
             showToast('Opening Google sign in...');
