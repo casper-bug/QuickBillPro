@@ -333,6 +333,8 @@
             box-shadow: 0 4px 6px var(--shadow);
             margin-bottom: 1.5rem;
             height: 300px;
+            overflow-x: auto;
+            overflow-y: auto;
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
         
@@ -931,6 +933,8 @@
             .chart-container {
                 padding: 1rem !important;
                 height: 250px;
+                overflow-x: auto;
+                overflow-y: auto;
             }
             
             .chart-title {
@@ -1439,10 +1443,10 @@
                 <div class="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
                     <h3 class="text-xl font-black">Cloud Sync (Optional)</h3>
                     
-                    <!-- Anonymous/Demo Mode -->
+                    <!-- Anonymous/Offline Mode -->
                     <div id="auth-demo-mode" class="space-y-4">
                         <div class="p-6 bg-yellow-50 rounded-2xl border border-yellow-200" style="background-color: rgba(251, 191, 36, 0.1); border-color: rgba(251, 191, 36, 0.3);">
-                            <p class="font-bold text-sm mb-2" style="color: var(--text-primary);">📱 Demo Mode</p>
+                            <p class="font-bold text-sm mb-2" style="color: var(--text-primary);">📱 Offline Mode</p>
                             <p class="text-xs" style="color: var(--text-secondary);">You're using local storage only. Sign in to sync data across devices.</p>
                         </div>
                         
