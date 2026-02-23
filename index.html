@@ -1704,6 +1704,30 @@
             }
         };
 
+        // Debounced auto-sync: triggered after every local data change
+        let autoSyncTimer = null;
+        window.scheduleAutoSync = () => {
+            if (!window.firebaseUser || window.firebaseUser.isAnonymous) return;
+            const uid = window.firebaseUserId;
+            if (!uid) return;
+            clearTimeout(autoSyncTimer);
+            autoSyncTimer = setTimeout(async () => {
+                const result = await window.syncDataToFirestore(uid);
+                if (result.success) {
+                    console.log('Auto-sync completed');
+                    const lastSyncEl = document.getElementById('auth-last-sync');
+                    if (lastSyncEl) {
+                        lastSyncEl.textContent = 'Last synced: Just now';
+                    }
+                } else {
+                    console.warn('Auto-sync failed:', result.error);
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('⚠️ Cloud sync failed. Changes saved locally.');
+                    }
+                }
+            }, 3000);
+        };
+
         // Firebase Authentication
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -1718,9 +1742,8 @@
                     window.updateAuthUI(user);
                 }
 
-                // Auto-load cloud data when a non-anonymous user signs in on a device with no local data
-                const hasLocalData = !!localStorage.getItem(`quickbill-${user.uid}-orders`);
-                if (!user.isAnonymous && !hasLocalData && typeof window.loadDataFromFirestore === 'function') {
+                // Auto-load cloud data whenever a non-anonymous user signs in
+                if (!user.isAnonymous && typeof window.loadDataFromFirestore === 'function') {
                     try {
                         const result = await window.loadDataFromFirestore(user.uid);
                         if (result.success && result.data) {
@@ -1938,6 +1961,10 @@
                 }
 
                 localStorage.setItem(lsKey, JSON.stringify(dataToStore));
+                // Trigger auto-sync to Firestore on every change
+                if (typeof window.scheduleAutoSync === 'function') {
+                    window.scheduleAutoSync();
+                }
             } catch (error) {
                 console.error(`[LocalStorage] Error saving ${key}:`, error);
             }
