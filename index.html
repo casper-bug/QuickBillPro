@@ -4250,12 +4250,12 @@
 
         // --- Settings Page Logic ---
         function renderSettings() {
-            document.getElementById('companyName').value = companyDetails.companyName;
-            document.getElementById('address').value = companyDetails.address;
-            document.getElementById('phone').value = companyDetails.phone;
-            document.getElementById('email').value = companyDetails.email;
-            document.getElementById('gstNumber').value = companyDetails.gstNumber;
-            document.getElementById('defaultBillNotes').value = companyDetails.defaultBillNotes;
+            document.getElementById('companyName').value = companyDetails.companyName || '';
+            document.getElementById('address').value = companyDetails.address || '';
+            document.getElementById('phone').value = companyDetails.phone || '';
+            document.getElementById('email').value = companyDetails.email || '';
+            document.getElementById('gstNumber').value = companyDetails.gstNumber || '';
+            document.getElementById('defaultBillNotes').value = companyDetails.defaultBillNotes || '';
             
             // Update auth UI
             if (window.firebaseUser) {
@@ -4505,7 +4505,7 @@
                     isAuthReady = true;
 
                     // Load data from localStorage
-                    companyDetails = loadDataFromLocalStorage('companyDetails', companyDetails);
+                    companyDetails = { ...companyDetails, ...loadDataFromLocalStorage('companyDetails', {}) };
 
                     const storedOrders = loadDataFromLocalStorage('orders', []);
                     const processedOrders = storedOrders.map(order => ({
