@@ -1670,10 +1670,10 @@
             try {
                 const userDoc = doc(db, 'users', userId);
                 const data = {
-                    orders: localStorage.getItem('orders') || '[]',
-                    stock: localStorage.getItem('stock') || '[]',
-                    notes: localStorage.getItem('notes') || '[]',
-                    companyDetails: localStorage.getItem('companyDetails') || '{}',
+                    orders: localStorage.getItem(`quickbill-${userId}-orders`) || '[]',
+                    stock: localStorage.getItem(`quickbill-${userId}-stock`) || '[]',
+                    notes: localStorage.getItem(`quickbill-${userId}-notes`) || '[]',
+                    companyDetails: localStorage.getItem(`quickbill-${userId}-companyDetails`) || '{}',
                     lastSync: new Date().toISOString()
                 };
                 
@@ -1705,7 +1705,7 @@
         };
 
         // Firebase Authentication
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 window.firebaseUserId = user.uid;
                 window.firebaseUser = user;
@@ -1716,6 +1716,24 @@
                 // Update UI
                 if (typeof window.updateAuthUI === 'function') {
                     window.updateAuthUI(user);
+                }
+
+                // Auto-load cloud data when a non-anonymous user signs in on a device with no local data
+                const hasLocalData = !!localStorage.getItem(`quickbill-${user.uid}-orders`);
+                if (!user.isAnonymous && !hasLocalData && typeof window.loadDataFromFirestore === 'function') {
+                    try {
+                        const result = await window.loadDataFromFirestore(user.uid);
+                        if (result.success && result.data) {
+                            const uid = user.uid;
+                            if (result.data.orders) localStorage.setItem(`quickbill-${uid}-orders`, result.data.orders);
+                            if (result.data.stock) localStorage.setItem(`quickbill-${uid}-stock`, result.data.stock);
+                            if (result.data.notes) localStorage.setItem(`quickbill-${uid}-notes`, result.data.notes);
+                            if (result.data.companyDetails) localStorage.setItem(`quickbill-${uid}-companyDetails`, result.data.companyDetails);
+                            console.log('Cloud data loaded for user:', uid);
+                        }
+                    } catch (e) {
+                        console.error('Auto-load from Firestore failed:', e);
+                    }
                 }
                 
                 // Trigger app initialization if load event already fired
@@ -4214,11 +4232,12 @@
             const result = await window.loadDataFromFirestore(window.firebaseUserId);
             
             if (result.success && result.data) {
-                // Load data into localStorage
-                if (result.data.orders) localStorage.setItem('orders', result.data.orders);
-                if (result.data.stock) localStorage.setItem('stock', result.data.stock);
-                if (result.data.notes) localStorage.setItem('notes', result.data.notes);
-                if (result.data.companyDetails) localStorage.setItem('companyDetails', result.data.companyDetails);
+                // Load data into localStorage using user-specific keys
+                const uid = window.firebaseUserId;
+                if (result.data.orders) localStorage.setItem(`quickbill-${uid}-orders`, result.data.orders);
+                if (result.data.stock) localStorage.setItem(`quickbill-${uid}-stock`, result.data.stock);
+                if (result.data.notes) localStorage.setItem(`quickbill-${uid}-notes`, result.data.notes);
+                if (result.data.companyDetails) localStorage.setItem(`quickbill-${uid}-companyDetails`, result.data.companyDetails);
                 
                 showToast('✅ Data loaded successfully! Reloading...');
                 setTimeout(() => location.reload(), 1500);
