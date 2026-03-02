@@ -1296,11 +1296,18 @@
         <!-- Create Bill Section -->
         <div id="page-addOrder" class="page-content max-w-3xl mx-auto">
             <div class="p-8 lg:p-12 rounded-[3rem] shadow-2xl transition-colors" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
-                <div class="flex justify-between items-center mb-10">
+                <div class="flex flex-wrap justify-between items-center mb-10 gap-3">
                     <h2 class="text-3xl font-black tracking-tight">Generate Receipt</h2>
-                    <button onclick="startScanner()" class="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-sm shadow-xl hover:scale-105 active:scale-95 transition-all" style="box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
-                        <i class="material-icons">qr_code_scanner</i> Scan Barcode
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="barcode-lookup-input" placeholder="Barcode number..."
+                            aria-label="Barcode number input"
+                            class="p-3 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+                            style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color); width: 170px;"
+                            onkeydown="if(event.key==='Enter'){event.preventDefault();lookupBarcode(this.value);}">
+                        <button onclick="startScanner()" class="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-sm shadow-xl hover:scale-105 active:scale-95 transition-all" style="box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);">
+                            <i class="material-icons">qr_code_scanner</i> Camera
+                        </button>
+                    </div>
                 </div>
 
                 <form id="add-order-form" class="space-y-8">
@@ -1972,6 +1979,29 @@
 
         // --- Barcode Engine ---
         let isScannerActive = false;
+
+        function generateBarcodeNumber() {
+            const last = parseInt(localStorage.getItem('quickbill-barcode-seq') || '100000');
+            const next = last + 1;
+            localStorage.setItem('quickbill-barcode-seq', next.toString());
+            return next.toString();
+        }
+
+        function lookupBarcode(code) {
+            const normalizedCode = (code || '').toString().trim();
+            if (!normalizedCode) return;
+            const item = stock.find(s => s.barcode && s.barcode.toString().trim() === normalizedCode);
+            if (item) {
+                addItemRowWithData(item.name, item.price);
+                showToast(`✅ Added: ${item.name} (₹${item.price.toFixed(2)})`);
+                const input = document.getElementById('barcode-lookup-input');
+                if (input) input.value = '';
+            } else {
+                showToast(`❌ No product found for barcode: ${normalizedCode}`);
+                const input = document.getElementById('barcode-lookup-input');
+                if (input) input.select();
+            }
+        }
         
         function startScanner() {
             if (isScannerActive) return;
@@ -2011,71 +2041,8 @@
                 Quagga.onDetected(function(data) {
                     if (!isScannerActive) return;
                     const code = data.codeResult.code;
-                    console.log('Scanned barcode:', code);
-                    
-                    // Normalize the scanned code (remove whitespace, convert to string)
-                    const normalizedCode = code.toString().trim();
-                    
-                    // Look up product by barcode ID - try multiple matching strategies
-                    let item = null;
-                    
-                    // Strategy 1: Exact barcode match (string comparison)
-                    item = stock.find(s => s.barcode && s.barcode.toString().trim() === normalizedCode);
-                    
-                    // Strategy 2: Numeric barcode match (if barcode is stored as number)
-                    if (!item) {
-                        const numericCode = parseInt(normalizedCode);
-                        if (!isNaN(numericCode)) {
-                            item = stock.find(s => s.barcode && (parseInt(s.barcode.toString()) === numericCode || s.barcode.toString().trim() === normalizedCode));
-                        }
-                    }
-                    
-                    // Strategy 3: Try matching with leading zeros removed (both ways)
-                    if (!item && normalizedCode.length > 0) {
-                        const codeWithoutLeadingZeros = normalizedCode.replace(/^0+/, '');
-                        if (codeWithoutLeadingZeros !== normalizedCode && codeWithoutLeadingZeros.length > 0) {
-                            item = stock.find(s => {
-                                if (!s.barcode) return false;
-                                const storedBarcode = s.barcode.toString().trim();
-                                const storedWithoutZeros = storedBarcode.replace(/^0+/, '');
-                                return storedWithoutZeros === codeWithoutLeadingZeros || storedBarcode === codeWithoutLeadingZeros;
-                            });
-                        }
-                    }
-                    
-                    // Strategy 4: Try matching by substring (check if barcodes are contained in each other)
-                    if (!item && normalizedCode.length > 0) {
-                        item = stock.find(s => {
-                            if (!s.barcode) return false;
-                            const storedBarcode = s.barcode.toString().trim();
-                            // Check if stored barcode ends with the scanned code or vice versa
-                            return storedBarcode.endsWith(normalizedCode) || normalizedCode.endsWith(storedBarcode);
-                        });
-                    }
-                    
-                    // Strategy 5: Try exact product name match
-                    if (!item) {
-                        item = stock.find(s => s.name && s.name.trim().toLowerCase() === normalizedCode.toLowerCase());
-                    }
-                    
-                    // Strategy 6: Try partial product name match
-                    if (!item) {
-                        item = stock.find(s => s.name && (s.name.toLowerCase().includes(normalizedCode.toLowerCase()) || normalizedCode.toLowerCase().includes(s.name.toLowerCase())));
-                    }
-                    
-                    if (item) {
-                        addItemRowWithData(item.name, item.price);
-                        showToast(`✅ Added: ${item.name} (₹${item.price.toFixed(2)})`);
-                        stopScanner();
-                    } else {
-                        // Debug: show available barcodes
-                        const barcodes = stock.filter(s => s.barcode).map(s => ({ name: s.name, barcode: s.barcode.toString() }));
-                        console.log('Scanned code:', normalizedCode);
-                        console.log('Available barcodes:', barcodes);
-                        console.log('Total stock items:', stock.length, 'Items with barcodes:', barcodes.length);
-                        showToast(`❌ Product not found. Scanned: ${normalizedCode}. Try scanning again or add product to stock first.`);
-                        stopScanner();
-                    }
+                    stopScanner();
+                    lookupBarcode(code);
                 });
             });
         }
@@ -2986,7 +2953,6 @@
                         `;
                     } else {
                         const isLowStock = item.quantity <= 5;
-                        const barcodeDisplay = item.barcode || 'Not generated';
                         row.innerHTML = `
                             <td class="p-8 font-black text-sm">${item.name}</td>
                             <td class="p-8 font-bold text-gray-500">₹${item.price.toFixed(2)}</td>
@@ -2997,10 +2963,10 @@
                             </td>
                             <td class="p-8">
                                 <div class="flex flex-col items-start gap-2">
-                                    <button onclick="generateBarcode('${item.id}')" class="bg-indigo-600 text-white px-4 py-2 rounded-2xl text-sm font-black hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center gap-2">
-                                        <i class="material-icons text-lg">qr_code</i> Generate
+                                    <svg class="barcode-svg" style="max-width:200px;"></svg>
+                                    <button onclick="generateBarcode('${item.id}')" class="bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-xs font-black hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-1 mt-1">
+                                        <i class="material-icons text-sm">download</i> Download
                                     </button>
-                                    <span class="text-xs text-gray-500 font-mono">${barcodeDisplay}</span>
                                 </div>
                             </td>
                             <td class="p-8 text-right">
@@ -3010,6 +2976,21 @@
                                 </div>
                             </td>
                         `;
+                        if (item.barcode) {
+                            const svgEl = row.querySelector('.barcode-svg');
+                            if (svgEl) {
+                                try {
+                                    JsBarcode(svgEl, item.barcode.toString(), {
+                                        format: "CODE128",
+                                        width: 1.5,
+                                        height: 50,
+                                        displayValue: true,
+                                        fontSize: 10,
+                                        margin: 5
+                                    });
+                                } catch(e) { console.log('Barcode render error:', e); }
+                            }
+                        }
                     }
                     stockTableBody.appendChild(row);
                 });
@@ -3049,7 +3030,7 @@
 
             const newStockItem = {
                 id: crypto.randomUUID(),
-                barcode: `${Date.now()}${Math.floor(Math.random() * 10000)}`, // Unique numeric barcode
+                barcode: generateBarcodeNumber(),
                 name: productName,
                 price: productPrice,
                 quantity: productQuantity,
@@ -3112,7 +3093,7 @@
                 stock[itemIndex].isEditing = false;
                 // Preserve barcode when editing
                 if (!stock[itemIndex].barcode) {
-                    stock[itemIndex].barcode = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+                    stock[itemIndex].barcode = generateBarcodeNumber();
                 }
                 stock.sort((a, b) => a.name.localeCompare(b.name));
                 saveDataToLocalStorage('stock', stock);
@@ -3925,7 +3906,7 @@
             
             // Ensure item has a barcode
             if (!item.barcode) {
-                item.barcode = `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+                item.barcode = generateBarcodeNumber();
                 saveDataToLocalStorage('stock', stock);
             }
             
@@ -4558,7 +4539,7 @@
                         ...item,
                         price: parseFloat(item.price),
                         quantity: item.quantity !== undefined ? parseInt(item.quantity) : 0,
-                        barcode: item.barcode || `${Date.now()}${Math.floor(Math.random() * 10000)}` // Assign barcode to old items
+                        barcode: item.barcode || generateBarcodeNumber()
                     }));
                     stock.sort((a, b) => a.name.localeCompare(b.name));
                     
