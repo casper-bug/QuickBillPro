@@ -2987,6 +2987,7 @@
             renderTopProducts(currentPeriodOrders);
             renderRecentActivity(currentPeriodOrders);
             renderStockStatus();
+            renderExpiryStatus();
         }
 
         function updateChangeIndicator(elementId, change, type) {
@@ -3083,121 +3084,136 @@
             const svgNS = "http://www.w3.org/2000/svg";
             const svg = document.createElementNS(svgNS, "svg");
             
-            let groupedData = {};
-            const now = new Date();
             const dataPoints = [];
+            const now = new Date();
             
             if (daysRange <= 30) {
                 for (let i = 0; i < daysRange; i++) {
                     const date = new Date(now);
                     date.setDate(date.getDate() - (daysRange - 1 - i));
-                    const dateKey = date.toISOString().split('T')[0];
-                    groupedData[dateKey] = 0;
-                    dataPoints.push({ date: dateKey, count: 0 });
+                    dataPoints.push({ date: date.toISOString().split('T')[0], count: 0 });
                 }
-                
                 orders.forEach(order => {
                     const orderDate = new Date(order.orderDate).toISOString().split('T')[0];
-                    const dataPoint = dataPoints.find(dp => dp.date === orderDate);
-                    if (dataPoint) {
-                        dataPoint.count++;
-                    }
+                    const dp = dataPoints.find(d => d.date === orderDate);
+                    if (dp) dp.count++;
                 });
             } else {
                 const weeks = Math.ceil(daysRange / 7);
-                for (let i = 0; i < weeks; i++) {
-                    dataPoints.push({ label: `Week ${i + 1}`, count: 0 });
-                }
-                
+                for (let i = 0; i < weeks; i++) dataPoints.push({ label: `Wk ${i + 1}`, count: 0 });
                 orders.forEach(order => {
-                    const orderDate = new Date(order.orderDate);
-                    const diffTime = Math.abs(now - orderDate);
-                    const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
-                    if (diffWeeks <= weeks) {
-                        dataPoints[weeks - diffWeeks].count++;
-                    }
+                    const diffWeeks = Math.ceil(Math.abs(now - new Date(order.orderDate)) / (1000 * 60 * 60 * 24 * 7));
+                    if (diffWeeks <= weeks) dataPoints[weeks - diffWeeks].count++;
                 });
             }
-            
-            // Calculate SVG width based on data points - ensure better spacing
+
+            // Chart geometry constants
+            const svgHeight = 240;
+            const chartTop = 25;     // top of the plotted area (where maxCount lives)
+            const chartBottom = 190; // bottom of the plotted area (where 0 lives)
+            const leftMargin = 40;
+            const rightMargin = 40;
+
             const minWidth = 600;
-            const pointSpacing = 35; // Increased spacing per data point
-            const calculatedWidth = Math.max(minWidth, 40 + (dataPoints.length * pointSpacing) + 40);
-            
+            const pointSpacing = Math.max(35, Math.floor((minWidth - leftMargin - rightMargin) / Math.max(dataPoints.length, 1)));
+            const calculatedWidth = Math.max(minWidth, leftMargin + dataPoints.length * pointSpacing + rightMargin);
+
             svg.setAttribute("width", calculatedWidth);
-            svg.setAttribute("height", "220");
-            svg.setAttribute("viewBox", `0 0 ${calculatedWidth} 220`);
+            svg.setAttribute("height", svgHeight);
+            svg.setAttribute("viewBox", `0 0 ${calculatedWidth} ${svgHeight}`);
             svg.style.minWidth = `${calculatedWidth}px`;
-            
-            const counts = dataPoints.map(dp => dp.count);
-            const maxCount = Math.max(...counts, 1);
-            
-            const chartWidth = calculatedWidth - 80;
-            
+            svg.style.display = 'block';
+
+            const maxCount = Math.max(...dataPoints.map(d => d.count), 1);
+            const chartAreaHeight = chartBottom - chartTop; // 165
+
+            // Y-axis grid lines (5 lines: 0 … maxCount in 4 steps)
             for (let i = 0; i <= 4; i++) {
-                const y = 40 + (i * 40);
+                const y = chartBottom - (i / 4) * chartAreaHeight;
                 const line = document.createElementNS(svgNS, "line");
-                line.setAttribute("x1", "40");
-                line.setAttribute("y1", y);
-                line.setAttribute("x2", calculatedWidth - 40);
-                line.setAttribute("y2", y);
+                line.setAttribute("x1", leftMargin); line.setAttribute("y1", y);
+                line.setAttribute("x2", calculatedWidth - rightMargin); line.setAttribute("y2", y);
                 line.setAttribute("class", "chart-grid-line");
                 svg.appendChild(line);
-                
-                const text = document.createElementNS(svgNS, "text");
-                text.setAttribute("x", "30");
-                text.setAttribute("y", y + 4);
-                text.setAttribute("text-anchor", "end");
-                text.setAttribute("font-size", "10");
-                text.setAttribute("fill", "#6b7280");
-                text.textContent = Math.round((maxCount / 4) * (4 - i));
-                svg.appendChild(text);
+
+                const label = document.createElementNS(svgNS, "text");
+                label.setAttribute("x", leftMargin - 6);
+                label.setAttribute("y", y + 4);
+                label.setAttribute("text-anchor", "end");
+                label.setAttribute("font-size", "10");
+                label.setAttribute("fill", "#6b7280");
+                label.textContent = Math.round((maxCount / 4) * i);
+                svg.appendChild(label);
             }
-            
-            const points = dataPoints.map((dp, i) => {
-                const x = 40 + (i * (chartWidth / (dataPoints.length - 1 || 1)));
-                const y = 200 - 40 - (dp.count / maxCount * 160);
-                return `${x},${y}`;
-            }).join(' ');
-            
+
+            // Y-axis title
+            const yTitle = document.createElementNS(svgNS, "text");
+            yTitle.setAttribute("x", "12");
+            yTitle.setAttribute("y", (chartTop + chartBottom) / 2);
+            yTitle.setAttribute("text-anchor", "middle");
+            yTitle.setAttribute("font-size", "9");
+            yTitle.setAttribute("fill", "#9ca3af");
+            yTitle.setAttribute("transform", `rotate(-90, 12, ${(chartTop + chartBottom) / 2})`);
+            yTitle.textContent = "Orders";
+            svg.appendChild(yTitle);
+
+            // Compute (x, y) for each data point using the CORRECT formula:
+            //   count=0  → y = chartBottom
+            //   count=max → y = chartTop
+            const xStep = dataPoints.length > 1 ? (calculatedWidth - leftMargin - rightMargin) / (dataPoints.length - 1) : 0;
+            const coordOf = (dp, i) => ({
+                x: leftMargin + i * xStep,
+                y: chartBottom - (dp.count / maxCount) * chartAreaHeight
+            });
+
+            const coords = dataPoints.map(coordOf);
+
+            // Area fill
+            const areaPointsStr = coords.map(c => `${c.x},${c.y}`).join(' ') +
+                ` ${coords[coords.length - 1].x},${chartBottom} ${coords[0].x},${chartBottom}`;
+            const polygon = document.createElementNS(svgNS, "polygon");
+            polygon.setAttribute("points", areaPointsStr);
+            polygon.setAttribute("class", "area-path");
+            svg.appendChild(polygon);
+
+            // Line
             const polyline = document.createElementNS(svgNS, "polyline");
-            polyline.setAttribute("points", points);
+            polyline.setAttribute("points", coords.map(c => `${c.x},${c.y}`).join(' '));
             polyline.setAttribute("class", "line-path");
             polyline.setAttribute("fill", "none");
             svg.appendChild(polyline);
-            
-            const areaPoints = `${points} ${calculatedWidth - 40},200 40,200`;
-            const polygon = document.createElementNS(svgNS, "polygon");
-            polygon.setAttribute("points", areaPoints);
-            polygon.setAttribute("class", "area-path");
-            svg.appendChild(polygon);
-            
+
+            // Determine how often to show x-axis labels to avoid crowding
+            const labelInterval = daysRange <= 7 ? 1 : daysRange <= 30 ? 5 : daysRange <= 90 ? 2 : 6;
+
+            // Data point circles + x-axis labels
             dataPoints.forEach((dp, i) => {
-                const x = 40 + (i * (chartWidth / (dataPoints.length - 1 || 1)));
-                const y = 200 - 40 - (dp.count / maxCount * 160);
-                
+                const { x, y } = coords[i];
+
                 const circle = document.createElementNS(svgNS, "circle");
-                circle.setAttribute("cx", x);
-                circle.setAttribute("cy", y);
-                circle.setAttribute("r", "4");
-                circle.setAttribute("fill", "#3b82f6");
+                circle.setAttribute("cx", x); circle.setAttribute("cy", y);
+                circle.setAttribute("r", "4"); circle.setAttribute("fill", "#3b82f6");
                 svg.appendChild(circle);
-                
-                const text = document.createElementNS(svgNS, "text");
-                text.setAttribute("x", x);
-                text.setAttribute("y", "212");
-                text.setAttribute("text-anchor", "middle");
-                text.setAttribute("font-size", "9");
-                text.setAttribute("fill", "#6b7280");
-                
-                if (daysRange <= 30) {
-                    const date = new Date(dp.date);
-                    text.textContent = date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-                } else {
-                    text.textContent = dp.label;
+
+                // Tooltip title
+                const title = document.createElementNS(svgNS, "title");
+                const labelText = daysRange <= 30
+                    ? new Date(dp.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+                    : dp.label;
+                title.textContent = `${labelText}: ${dp.count} order${dp.count !== 1 ? 's' : ''}`;
+                circle.appendChild(title);
+
+                // X-axis label (only every Nth point to avoid crowding)
+                if (i % labelInterval === 0 || i === dataPoints.length - 1) {
+                    const text = document.createElementNS(svgNS, "text");
+                    text.setAttribute("x", x);
+                    text.setAttribute("y", chartBottom + 22);
+                    text.setAttribute("text-anchor", "middle");
+                    text.setAttribute("font-size", "9");
+                    text.setAttribute("fill", "#6b7280");
+                    text.textContent = labelText;
+                    svg.appendChild(text);
                 }
-                
-                svg.appendChild(text);
             });
             
             chartContainer.appendChild(svg);
@@ -3325,6 +3341,59 @@
             if (lowStockItems.length === 0) {
                 stockContainer.innerHTML = '<p class="text-gray-500 text-center py-4">All items are well stocked</p>';
             }
+        }
+
+        function renderExpiryStatus() {
+            const expiryContainer = document.getElementById('expiry-status');
+            if (!expiryContainer) return;
+            expiryContainer.innerHTML = '';
+
+            const mode = getIndustryMode();
+            if (mode === 'general') {
+                expiryContainer.innerHTML = `<p class="py-4 text-sm text-center" style="color:var(--text-secondary);">Enable <strong>Medical</strong> or <strong>Grocery</strong> mode in Settings to track product expiry.</p>`;
+                return;
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const itemsWithExpiry = stock
+                .filter(item => item.expiryDate)
+                .map(item => {
+                    const expDate = new Date(item.expiryDate);
+                    const diffDays = Math.ceil((expDate - today) / 86400000);
+                    return { ...item, diffDays, expDate };
+                })
+                .sort((a, b) => a.diffDays - b.diffDays);
+
+            if (itemsWithExpiry.length === 0) {
+                expiryContainer.innerHTML = `<p class="py-4 text-sm text-center" style="color:var(--text-secondary);">No items with expiry dates tracked. Add expiry dates to your inventory items.</p>`;
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+            itemsWithExpiry.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'recent-activity-item';
+                let badgeClass, badgeText, iconName;
+                if (item.diffDays < 0) {
+                    badgeClass = 'expired'; badgeText = `⛔ Expired ${Math.abs(item.diffDays)}d ago`; iconName = 'dangerous';
+                } else if (item.diffDays <= 30) {
+                    badgeClass = 'warn'; badgeText = `⚠️ Expires in ${item.diffDays}d`; iconName = 'warning';
+                } else {
+                    badgeClass = 'ok'; badgeText = `✅ ${item.expDate.toLocaleDateString()}`; iconName = 'check_circle';
+                }
+                el.innerHTML = `
+                    <div class="activity-icon"><i class="material-icons">${iconName}</i></div>
+                    <div class="activity-details">
+                        <div class="activity-title">${item.name}</div>
+                        <div class="activity-time"><span class="expiry-badge ${badgeClass}">${badgeText}</span></div>
+                    </div>
+                    <div class="font-semibold text-sm" style="color:var(--text-secondary);">${item.quantity} units</div>
+                `;
+                fragment.appendChild(el);
+            });
+            expiryContainer.appendChild(fragment);
         }
 
         function getTimeAgo(date) {
@@ -5184,6 +5253,7 @@
             document.getElementById('email').value = companyDetails.email || '';
             document.getElementById('gstNumber').value = companyDetails.gstNumber || '';
             document.getElementById('defaultBillNotes').value = companyDetails.defaultBillNotes || '';
+            document.getElementById('gstRateSetting').value = (companyDetails.gstRate || 0).toString();
             
             // Update industry mode UI
             updateIndustryModeUI(getIndustryMode());
@@ -5210,7 +5280,8 @@
                 email: document.getElementById('email').value.trim(),
                 gstNumber: document.getElementById('gstNumber').value.trim(),
                 defaultBillNotes: document.getElementById('defaultBillNotes').value.trim(),
-                industryMode: companyDetails.industryMode || 'general'
+                industryMode: companyDetails.industryMode || 'general',
+                gstRate: parseFloat(document.getElementById('gstRateSetting').value) || 0
             };
             
             saveDataToLocalStorage('companyDetails', companyDetails);
