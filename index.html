@@ -563,9 +563,9 @@
             padding: 1.5rem;
             box-shadow: 0 4px 6px var(--shadow);
             margin-bottom: 1.5rem;
-            height: 300px;
-            overflow-x: auto;
-            overflow-y: visible;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
         
@@ -740,11 +740,11 @@
         .simple-bar-chart {
             display: flex;
             align-items: flex-end;
-            height: 200px;
+            height: 240px;
             gap: 1rem;
-            padding: 1rem 0 2rem;
+            padding: 2rem 0 2.5rem;
             overflow-x: auto;
-            overflow-y: visible;
+            overflow-y: hidden;
             min-width: 100%;
         }
         
@@ -786,12 +786,36 @@
             height: 220px;
             width: 100%;
             overflow-x: auto;
-            overflow-y: visible;
+            overflow-y: hidden;
         }
         
         .chart-grid-line {
             stroke: var(--border-color);
             stroke-width: 1;
+        }
+
+        /* ── Themed scrollbars (WebKit + Firefox) ─────────────────────────── */
+        html {
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-color) var(--bg-tertiary);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+        ::-webkit-scrollbar-corner {
+            background: var(--bg-tertiary);
         }
 
         /* Modal Styles */
@@ -1176,16 +1200,15 @@
             /* Chart containers */
             .chart-container {
                 padding: 0.875rem !important;
-                height: auto !important;
-                min-height: 260px;
-                overflow-x: auto;
-                overflow-y: visible;
+                overflow: hidden;
             }
             
             .simple-bar-chart {
-                height: 200px !important;
+                height: 220px !important;
+                padding-top: 1rem !important;
                 gap: 0.5rem !important;
-                overflow-y: visible !important;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
             }
             
             .bar-container {
@@ -1194,7 +1217,8 @@
             
             .simple-line-chart {
                 height: 220px !important;
-                overflow-y: visible !important;
+                overflow-x: auto !important;
+                overflow-y: hidden !important;
             }
             
             .chart-title {
@@ -3024,7 +3048,7 @@
             const maxValue = Math.max(...values, 1);
             
             Object.entries(groupedData).forEach(([label, value]) => {
-                const barHeight = (value / maxValue) * 150;
+                const barHeight = (value / maxValue) * 130;
                 
                 const barContainer = document.createElement('div');
                 barContainer.className = 'bar-container';
