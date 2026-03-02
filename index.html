@@ -2046,7 +2046,7 @@
                             Import Recovery File
                             <input type="file" id="import-file-input" class="hidden" onchange="importData(event)">
                         </label>
-                        <button onclick="resetApp()" class="w-full bg-red-50 text-red-500 py-5 rounded-2xl font-black text-sm hover:bg-red-100 transition-colors">Wipe Local Storage</button>
+                        <button onclick="resetApp()" class="w-full bg-red-50 text-red-500 py-5 rounded-2xl font-black text-sm hover:bg-red-100 transition-colors">Clear My Data</button>
                     </div>
                 </div>
             </div>
@@ -5157,10 +5157,33 @@
         });
 
         async function resetApp() {
-            const confirmed = await showConfirmation("Are you sure you want to reset the application? This will permanently delete ALL your data and reload the site.");
+            const isOnlineUser = window.firebaseUser && !window.firebaseUser.isAnonymous;
+            const confirmMsg = isOnlineUser
+                ? "Are you sure you want to clear all your data? This will permanently delete your orders, stock, notes, and business details from this device and the cloud. Your account will not be deleted."
+                : "Are you sure you want to clear all your data? This will permanently delete your orders, stock, notes, and business details from this device.";
+            const confirmed = await showConfirmation(confirmMsg);
             if (confirmed) {
-                localStorage.clear();
-                showToast("Application reset successfully. Reloading...");
+                const uid = (window.firebaseUserId || userId || 'local');
+                const dataKeys = ['orders', 'stock', 'notes', 'companyDetails'];
+                // Write empty data to localStorage for each key
+                dataKeys.forEach(key => {
+                    const defaultVal = key === 'companyDetails' ? '{}' : '[]';
+                    localStorage.setItem(`quickbill-${uid}-${key}`, defaultVal);
+                });
+                // If signed-in cloud user, push the empty data to Firestore as well
+                if (isOnlineUser && window.syncDataToFirestore) {
+                    try {
+                        const result = await window.syncDataToFirestore(uid);
+                        if (!result.success) {
+                            showToast('⚠️ Local data cleared but cloud sync failed. Try syncing manually.');
+                            return;
+                        }
+                    } catch (e) {
+                        showToast('⚠️ Local data cleared but cloud sync failed. Try syncing manually.');
+                        return;
+                    }
+                }
+                showToast("All data cleared successfully. Reloading...");
                 setTimeout(() => {
                     location.reload();
                 }, 1000);
