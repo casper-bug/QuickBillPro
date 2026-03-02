@@ -122,14 +122,13 @@
             to { opacity: 1; transform: translate3d(0, 0, 0); }
         }
 
-        /* Fixed Centered Notification */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translate3d(-50%, -15px, 0); }
-            to { opacity: 1; transform: translate3d(-50%, 0, 0); }
+        /* Toast notification — slide up from bottom */
+        @keyframes toastUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-
-        .animate-fade-in-down {
-            animation: fadeInDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        .animate-toast-up {
+            animation: toastUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .nav-button.active {
@@ -223,7 +222,17 @@
         /* --- Print Utilities --- */
         @media print {
             .no-print { display: none !important; }
-            body { background: white; }
+            body { background: white; margin: 0; padding: 0; }
+            /* Hide everything except the bill when printing */
+            body > *:not(#bill-to-print) { display: none !important; }
+            #bill-to-print {
+                position: static !important;
+                left: auto !important;
+                top: auto !important;
+                width: 100% !important;
+                display: block !important;
+                padding: 0 !important;
+            }
         }
         
         /* Loading overlay (Optimized) */
@@ -263,6 +272,157 @@
         table tr {
             will-change: contents;
         }
+
+        /* ── Onboarding overlay ── */
+        #onboarding-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            background: var(--bg-primary);
+            padding: 1.5rem;
+        }
+        #onboarding-overlay.hidden { display: none; }
+
+        .ob-card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .ob-step { display: none; width: 100%; max-width: 420px; flex-direction: column; align-items: center; gap: 1.25rem; }
+        .ob-step.active { display: flex; }
+
+        @keyframes obIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .ob-step.active { animation: obIn 0.25s ease forwards; }
+
+        .ob-mode-btn {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.1rem 1.25rem;
+            border: 2px solid var(--border-color);
+            border-radius: 1rem;
+            background: var(--bg-tertiary);
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .ob-mode-btn:hover { border-color: var(--accent-color); background: var(--hover-bg); }
+        .ob-mode-btn .ob-icon {
+            font-size: 2rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .ob-mode-btn .ob-label { font-weight: 800; font-size: 0.95rem; color: var(--text-primary); }
+        .ob-mode-btn .ob-desc  { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.15rem; }
+
+        .ob-skip-link {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+        .ob-skip-link:hover { color: var(--text-secondary); }
+
+        /* ── Connection-mode badge in settings ── */
+        .conn-mode-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.4rem;
+        }
+        .conn-mode-badge.online  { background: rgba(16,185,129,0.12); color: #059669; }
+        .conn-mode-badge.offline { background: rgba(107,114,128,0.12); color: #4b5563; }
+
+        /* Industry mode button styles */
+        .industry-mode-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 2px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            gap: 0.25rem;
+        }
+        .industry-mode-btn:hover {
+            border-color: var(--accent-color);
+            background: var(--hover-bg);
+        }
+        .industry-mode-btn.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.12);
+            color: #3b82f6;
+        }
+        .industry-mode-btn.active-medical {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.10);
+            color: #ef4444;
+        }
+        .industry-mode-btn.active-grocery {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.10);
+            color: #10b981;
+        }
+
+        /* Caution badge for high-risk medicines */
+        .caution-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            background: rgba(239, 68, 68, 0.12);
+            color: #dc2626;
+            border-radius: 0.4rem;
+            padding: 0.1rem 0.4rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 0.4rem;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* Expiry indicator badges */
+        .expiry-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            border-radius: 0.4rem;
+            padding: 0.1rem 0.4rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-top: 0.15rem;
+            white-space: nowrap;
+        }
+        .expiry-badge.ok { background: rgba(16, 185, 129, 0.12); color: #059669; }
+        .expiry-badge.warn { background: rgba(245, 158, 11, 0.14); color: #d97706; }
+        .expiry-badge.expired { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+        .expiry-badge.grocery { background: rgba(99, 102, 241, 0.12); color: #4f46e5; }
 
         /* Dashboard specific styles */
         .dashboard-grid {
@@ -948,10 +1108,24 @@
             
             /* Chart containers */
             .chart-container {
-                padding: 1rem !important;
-                height: 250px;
+                padding: 0.875rem !important;
+                height: auto !important;
+                min-height: 220px;
                 overflow-x: auto;
-                overflow-y: auto;
+                overflow-y: hidden;
+            }
+            
+            .simple-bar-chart {
+                height: 150px !important;
+                gap: 0.5rem !important;
+            }
+            
+            .bar-container {
+                min-width: 36px !important;
+            }
+            
+            .simple-line-chart {
+                height: 150px !important;
             }
             
             .chart-title {
@@ -977,13 +1151,6 @@
             .material-icons {
                 font-size: 1.25rem;
                 vertical-align: middle;
-            }
-            
-            /* Toast notifications */
-            #toast-display {
-                max-width: 90%;
-                padding: 0.75rem 1rem !important;
-                font-size: 0.875rem !important;
             }
             
             /* Modal dialogs */
@@ -1034,11 +1201,11 @@
             #notes-list {
                 grid-template-columns: 1fr !important;
             }
-            
-            /* Dashboard grid */
+
+            /* Dashboard grid — 2x2 on mobile */
             .dashboard-grid {
-                grid-template-columns: 1fr !important;
-                gap: 1rem !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.75rem !important;
             }
             
             /* Settings page */
@@ -1100,6 +1267,92 @@
                 width: 24px !important;
                 height: 24px !important;
             }
+
+            /* Reduce excessive table cell padding on mobile */
+            table th, table td {
+                padding: 0.625rem 0.75rem !important;
+            }
+
+            /* ── Bill items table → card layout on mobile ── */
+            #products-table {
+                display: block !important;
+            }
+            #products-table thead {
+                display: none !important;
+            }
+            #products-table tbody {
+                display: block !important;
+            }
+            #bill-items-container tr {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                align-items: flex-end !important;
+                gap: 0.4rem !important;
+                padding: 0.75rem !important;
+                border-bottom: 1px solid var(--border-color) !important;
+            }
+            /* Product name — full width top row */
+            #bill-items-container td:nth-child(1) {
+                width: 100% !important;
+                padding: 0 !important;
+            }
+            /* Qty and Price — side by side, equal halves */
+            #bill-items-container td:nth-child(2),
+            #bill-items-container td:nth-child(3) {
+                flex: 1 1 0 !important;
+                padding: 0 !important;
+                min-width: 0 !important;
+            }
+            /* Total — compact, aligned bottom */
+            #bill-items-container td:nth-child(4) {
+                flex: 0 0 auto !important;
+                display: flex !important;
+                align-items: flex-end !important;
+                padding: 0 0.25rem 0.3rem !important;
+                font-size: 0.9rem !important;
+                font-weight: 700 !important;
+            }
+            /* Remove × button — aligned bottom */
+            #bill-items-container td:nth-child(5) {
+                flex: 0 0 auto !important;
+                display: flex !important;
+                align-items: flex-end !important;
+                padding: 0 0 0.1rem !important;
+            }
+            /* Inputs — compact, full-width within their cell */
+            #bill-items-container input {
+                width: 100% !important;
+                min-width: 0 !important;
+                padding: 0.55rem 0.625rem !important;
+                font-size: 0.875rem !important;
+                border-radius: 0.75rem !important;
+            }
+            /* Mini label above qty/price inputs */
+            #bill-items-container td[data-label]::before {
+                content: attr(data-label);
+                display: block;
+                font-size: 0.6rem;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                margin-bottom: 0.2rem;
+                color: var(--text-tertiary);
+            }
+
+            /* Reduce oversized card padding on mobile */
+            .rounded-\[3rem\] {
+                border-radius: 1.25rem !important;
+                padding: 1rem !important;
+            }
+            .p-10, .p-12 {
+                padding: 1rem !important;
+            }
+
+            /* Stat card value — smaller on tiny screens */
+            .stat-value {
+                font-size: 1.25rem !important;
+                margin: 0.25rem 0 !important;
+            }
         }
     </style>
 </head>
@@ -1127,12 +1380,178 @@
     </div>
 
 
-    <!-- Toast Notification -->
-    <div id="toast-display" class="fixed top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-8 py-4 rounded-2xl shadow-2xl z-[6000] flex items-center gap-4 hidden animate-fade-in-down">
-        <span id="toast-text" class="text-sm font-semibold"></span>
-        <button onclick="this.parentElement.classList.add('hidden')" class="hover:bg-white/10 p-1 rounded-lg">
-            <i class="material-icons text-xl">close</i>
-        </button>
+    <!-- Toast Notification — bottom, auto-dismiss, no close button -->
+    <div id="toast-display" class="fixed bottom-6 left-1/2 z-[6000] hidden pointer-events-none" style="transform: translateX(-50%); min-width: 180px; max-width: min(360px, 90vw);">
+        <div id="toast-inner" class="animate-toast-up flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold text-white" style="background: #1f2937;">
+            <span id="toast-text"></span>
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════
+         Onboarding Overlay (first-time only)
+         ════════════════════════════════ -->
+    <div id="onboarding-overlay" class="hidden">
+
+        <!-- ── Step 0: Welcome ── -->
+        <div class="ob-step active" id="ob-step-0">
+            <div class="ob-card" style="text-align:center; gap: 1.5rem;">
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg" style="background: #000;">
+                    <i class="material-icons text-white" style="font-size:2rem;">receipt_long</i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight" style="color:var(--text-primary);">Welcome to<br>QUICKBILL<span style="color:#3b82f6;">PRO</span></h1>
+                    <p class="text-sm mt-2" style="color:var(--text-secondary);">Fast, modern billing for your business. Let's get you set up in under a minute.</p>
+                </div>
+                <button onclick="obGoStep(1)" class="w-full bg-black text-white py-4 rounded-2xl font-black text-base hover:opacity-90 transition-opacity" style="background:#111827;">Get Started →</button>
+            </div>
+        </div>
+
+        <!-- ── Step 1: Online vs Offline ── -->
+        <div class="ob-step" id="ob-step-1">
+            <div class="ob-card" style="gap:1rem;">
+                <div>
+                    <h2 class="text-xl font-black" style="color:var(--text-primary);">How do you want to use the app?</h2>
+                    <p class="text-xs mt-1" style="color:var(--text-secondary);">This affects how your data is stored and synced.</p>
+                </div>
+                <button class="ob-mode-btn" onclick="obChooseMode('online')">
+                    <span class="ob-icon">☁️</span>
+                    <span>
+                        <div class="ob-label">Online Mode</div>
+                        <div class="ob-desc">Your data is backed up to the cloud and stays in sync across all your devices. Requires a free account.</div>
+                    </span>
+                </button>
+                <button class="ob-mode-btn" onclick="obChooseMode('offline')">
+                    <span class="ob-icon">📱</span>
+                    <span>
+                        <div class="ob-label">Offline Mode</div>
+                        <div class="ob-desc">Everything stays on this device only. No account needed. No internet required. You can always switch later in Settings.</div>
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ── Step 2: Sign in / Sign up (online path) ── -->
+        <div class="ob-step" id="ob-step-2">
+            <div class="ob-card" style="gap:1rem;">
+                <div>
+                    <h2 class="text-xl font-black" style="color:var(--text-primary);">Create your account</h2>
+                    <p class="text-xs mt-1" style="color:var(--text-secondary);">Sign in or sign up to enable cloud backup and multi-device sync.</p>
+                </div>
+                <!-- Google -->
+                <button onclick="obHandleGoogle()" class="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm border-2 transition-colors hover:bg-gray-50" style="border-color:var(--border-color); background:var(--bg-secondary); color:var(--text-primary);">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Continue with Google
+                </button>
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 h-px" style="background:var(--border-color);"></div>
+                    <span class="text-xs" style="color:var(--text-tertiary);">or</span>
+                    <div class="flex-1 h-px" style="background:var(--border-color);"></div>
+                </div>
+                <!-- Email / password — autocomplete enabled for password managers -->
+                <form id="ob-auth-form" onsubmit="return false;" autocomplete="on" class="space-y-3">
+                    <input type="email" id="ob-email" name="email" autocomplete="email" placeholder="Email address"
+                        class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                        style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                    <input type="password" id="ob-password" name="password" autocomplete="current-password" placeholder="Password"
+                        class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                        style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                    <p id="ob-auth-error" class="text-xs text-red-500 hidden"></p>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="obHandleSignIn()" class="flex-1 bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
+                        <button type="button" onclick="obHandleSignUp()" class="flex-1 py-3 rounded-2xl font-bold text-sm transition-colors" style="background:var(--bg-tertiary); color:var(--text-primary);">Sign Up</button>
+                    </div>
+                </form>
+                <button class="ob-skip-link" onclick="obGoStep(3)">Skip for now — I'll sign in later</button>
+            </div>
+        </div>
+
+        <!-- ── Step 3: Company details + industry ── -->
+        <div class="ob-step" id="ob-step-3">
+            <div class="ob-card" style="gap:1rem;">
+                <div>
+                    <h2 class="text-xl font-black" style="color:var(--text-primary);">Set up your business</h2>
+                    <p class="text-xs mt-1" style="color:var(--text-secondary);">This appears on your bills. You can edit it any time in Settings.</p>
+                </div>
+                <input type="text" id="ob-company-name" placeholder="Business name" autocomplete="organization"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <input type="tel" id="ob-phone" placeholder="Phone number (optional)" autocomplete="tel"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <div>
+                    <p class="text-xs font-bold mb-2" style="color:var(--text-secondary);">Industry (optional)</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="obSetIndustry('general')" id="ob-ind-general" class="industry-mode-btn active">
+                            <i class="material-icons" style="font-size:1.5rem;">store</i>
+                            <span class="text-xs font-bold">General</span>
+                        </button>
+                        <button onclick="obSetIndustry('medical')" id="ob-ind-medical" class="industry-mode-btn">
+                            <i class="material-icons" style="font-size:1.5rem;">local_pharmacy</i>
+                            <span class="text-xs font-bold">Medical</span>
+                        </button>
+                        <button onclick="obSetIndustry('grocery')" id="ob-ind-grocery" class="industry-mode-btn">
+                            <i class="material-icons" style="font-size:1.5rem;">local_grocery_store</i>
+                            <span class="text-xs font-bold">Grocery</span>
+                        </button>
+                    </div>
+                </div>
+                <button onclick="obComplete()" class="w-full bg-black text-white py-4 rounded-2xl font-black text-base hover:opacity-90 transition-opacity" style="background:#111827;">Let's go →</button>
+                <button class="ob-skip-link" onclick="obComplete()">Skip — set up later</button>
+            </div>
+        </div>
+
+        <!-- ── Step 4: Install App ── -->
+        <div class="ob-step" id="ob-step-4">
+            <div class="ob-card" style="text-align:center; gap:1.5rem;">
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-md" style="background:#3b82f6;">
+                    <i class="material-icons text-white" style="font-size:2rem;">install_mobile</i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black" style="color:var(--text-primary);">Install the App</h2>
+                    <p class="text-sm mt-2" style="color:var(--text-secondary);">Add QuickBill Pro to your home screen for fast, full-screen access — even offline.</p>
+                </div>
+                <button id="ob-install-btn" onclick="obTriggerInstall()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-base hover:bg-blue-700 transition-colors">
+                    Add to Home Screen
+                </button>
+                <button class="ob-skip-link" onclick="obFinish()">Maybe later</button>
+            </div>
+        </div>
+
+    </div><!-- /#onboarding-overlay -->
+
+    <!-- Welcome-back modal (returning online user whose session expired) -->
+    <div id="welcome-back-overlay" class="hidden" style="position:fixed;inset:0;z-index:2500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;background:var(--bg-primary);">
+        <div class="ob-card" style="gap:1rem;">
+            <div>
+                <h2 class="text-xl font-black" style="color:var(--text-primary);">Welcome back 👋</h2>
+                <p class="text-xs mt-1" style="color:var(--text-secondary);">Sign in to load your data from the cloud.</p>
+            </div>
+            <button onclick="wbHandleGoogle()" class="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm border-2 transition-colors hover:bg-gray-50" style="border-color:var(--border-color); background:var(--bg-secondary); color:var(--text-primary);">
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Sign in with Google
+            </button>
+            <form onsubmit="return false;" autocomplete="on" class="space-y-3">
+                <input type="email" id="wb-email" name="email" autocomplete="email" placeholder="Email"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <input type="password" id="wb-password" name="password" autocomplete="current-password" placeholder="Password"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <p id="wb-auth-error" class="text-xs text-red-500 hidden"></p>
+                <button type="button" onclick="wbHandleSignIn()" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
+            </form>
+            <button class="ob-skip-link" onclick="wbContinueOffline()">Continue with local data instead</button>
+        </div>
     </div>
 
     <!-- Custom Confirmation Modal -->
@@ -1219,8 +1638,8 @@
     <main class="flex-grow max-w-7xl mx-auto w-full p-4 lg:p-8">
         
         <!-- Dashboard Section -->
-        <div id="page-dashboard" class="page-content space-y-8">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <div id="page-dashboard" class="page-content space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <h2 class="text-3xl font-black tracking-tight">Business Hub</h2>
                 <div class="dashboard-date-filter no-print">
                     <button class="date-filter-button active" data-range="7">7D</button>
@@ -1231,42 +1650,42 @@
                 </div>
             </div>
 
-            <div class="dashboard-grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="dashboard-grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
                 <div class="stat-card revenue">
-                    <div class="stat-label">Net Revenue</div>
+                    <div class="stat-label">Revenue</div>
                     <div class="stat-value" id="total-revenue">₹0</div>
                     <div class="stat-change positive" id="revenue-change">
                         <i class="material-icons text-sm">arrow_upward</i>
-                        <span>0% from previous period</span>
+                        <span>0%</span>
                     </div>
                 </div>
                 <div class="stat-card orders">
-                    <div class="stat-label">Total Orders</div>
+                    <div class="stat-label">Orders</div>
                     <div class="stat-value" id="total-orders">0</div>
                     <div class="stat-change positive" id="orders-change">
                         <i class="material-icons text-sm">arrow_upward</i>
-                        <span>0% from previous period</span>
+                        <span>0%</span>
                     </div>
                 </div>
                 <div class="stat-card customers">
-                    <div class="stat-label">Active Customers</div>
+                    <div class="stat-label">Customers</div>
                     <div class="stat-value" id="active-customers">0</div>
                     <div class="stat-change positive" id="customers-change">
                         <i class="material-icons text-sm">arrow_upward</i>
-                        <span>0% from previous period</span>
+                        <span>0%</span>
                     </div>
                 </div>
                 <div class="stat-card stock">
-                    <div class="stat-label">Low Stock Items</div>
+                    <div class="stat-label">Low Stock</div>
                     <div class="stat-value" id="low-stock-count">0</div>
                     <div class="stat-change negative" id="stock-change">
                         <i class="material-icons text-sm">arrow_downward</i>
-                        <span>0 items need restocking</span>
+                        <span>0 need restock</span>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
                 <div class="chart-container">
                     <div class="chart-title">Revenue Trend</div>
                     <div class="simple-bar-chart" id="revenue-chart"></div>
@@ -1277,7 +1696,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
                 <div class="chart-container">
                     <div class="chart-title">Top Selling Products</div>
                     <ul class="top-products-list" id="top-products"></ul>
@@ -1362,11 +1781,24 @@
         <div id="page-stock" class="page-content space-y-8">
             <div class="p-8 lg:p-12 rounded-[3rem] shadow-sm transition-colors" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
                 <h2 class="text-2xl font-black mb-8">Stock Intake</h2>
-                <form id="stock-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <input type="text" id="stockProductName" placeholder="Item Name / Code" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
-                    <input type="number" id="stockProductPrice" placeholder="Unit Price" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
-                    <input type="number" id="stockProductQuantity" placeholder="Initial Stock" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
-                    <button type="submit" class="bg-black text-white p-5 rounded-2xl font-black tracking-tight">Register Item</button>
+                <form id="stock-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input type="text" id="stockProductName" placeholder="Item Name / Code" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
+                        <input type="number" id="stockProductPrice" placeholder="Unit Price" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
+                        <input type="number" id="stockProductQuantity" placeholder="Initial Stock" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
+                        <button type="submit" class="bg-black text-white p-5 rounded-2xl font-black tracking-tight">Register Item</button>
+                    </div>
+                    <!-- Industry-specific fields (shown based on industry mode) -->
+                    <div id="stock-industry-fields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black uppercase px-1" style="color: var(--text-tertiary);">Expiry Date</label>
+                            <input type="date" id="stockExpiryDate" class="w-full p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);">
+                        </div>
+                        <div id="stock-high-risk-field" class="hidden flex items-center gap-3 p-4 rounded-2xl" style="background-color: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.3);">
+                            <input type="checkbox" id="stockHighRisk" class="h-5 w-5 rounded focus:ring-red-500" style="accent-color: #ef4444;">
+                            <label for="stockHighRisk" class="font-bold text-sm" style="color: #dc2626;">⚠️ High Risk Medicine — show caution on bill</label>
+                        </div>
+                    </div>
                 </form>
             </div>
 
@@ -1449,6 +1881,44 @@
                             <div id="dark-mode-slider" class="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300"></div>
                         </button>
                     </div>
+                </div>
+
+                <!-- Connection Mode Card -->
+                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                    <h3 class="text-xl font-black">Connection Mode</h3>
+                    <p class="text-sm" style="color: var(--text-secondary);">Controls whether your data syncs to the cloud.</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="setConnectionMode('online')" id="conn-btn-online" class="ob-mode-btn flex-col items-center justify-center gap-1 py-3">
+                            <span style="font-size:1.6rem;">☁️</span>
+                            <span class="text-xs font-bold" style="color:var(--text-primary);">Online</span>
+                            <span class="text-[10px]" style="color:var(--text-tertiary);">Sync across devices</span>
+                        </button>
+                        <button onclick="setConnectionMode('offline')" id="conn-btn-offline" class="ob-mode-btn flex-col items-center justify-center gap-1 py-3">
+                            <span style="font-size:1.6rem;">📱</span>
+                            <span class="text-xs font-bold" style="color:var(--text-primary);">Offline</span>
+                            <span class="text-[10px]" style="color:var(--text-tertiary);">This device only</span>
+                        </button>
+                    </div>
+                    <div id="conn-mode-description" class="p-3 rounded-xl text-xs" style="background-color: var(--bg-tertiary); color: var(--text-secondary);"></div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                    <h3 class="text-xl font-black">Industry Mode</h3>
+                    <p class="text-sm" style="color: var(--text-secondary);">Choose your sector to unlock specialized features like expiry tracking, caution flags, and sector-specific indicators.</p>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button onclick="setIndustryMode('general')" id="mode-btn-general" class="industry-mode-btn">
+                            <i class="material-icons" style="font-size:1.75rem;">store</i>
+                            <span class="text-xs font-bold">General</span>
+                        </button>
+                        <button onclick="setIndustryMode('medical')" id="mode-btn-medical" class="industry-mode-btn">
+                            <i class="material-icons" style="font-size:1.75rem;">local_pharmacy</i>
+                            <span class="text-xs font-bold">Medical</span>
+                        </button>
+                        <button onclick="setIndustryMode('grocery')" id="mode-btn-grocery" class="industry-mode-btn">
+                            <i class="material-icons" style="font-size:1.75rem;">local_grocery_store</i>
+                            <span class="text-xs font-bold">Grocery</span>
+                        </button>
+                    </div>
+                    <div id="industry-mode-description" class="p-3 rounded-xl text-xs" style="background-color: var(--bg-tertiary); color: var(--text-secondary);"></div>
                 </div>
                 
                 <div class="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
@@ -1798,7 +2268,8 @@
             phone: '',
             email: '',
             gstNumber: '',
-            defaultBillNotes: ''
+            defaultBillNotes: '',
+            industryMode: 'general'
         };
         
         let currentItems = [];
@@ -1854,6 +2325,59 @@
             applyDarkMode();
         }
 
+        // --- Industry Mode Functions ---
+        function getIndustryMode() {
+            return companyDetails.industryMode || 'general';
+        }
+
+        function setIndustryMode(mode) {
+            companyDetails.industryMode = mode;
+            saveDataToLocalStorage('companyDetails', companyDetails);
+            updateIndustryModeUI(mode);
+            updateStockFormVisibility();
+            const labels = { general: 'General', medical: 'Medical', grocery: 'Grocery' };
+            showToast(`✅ Industry mode: ${labels[mode] || mode}`);
+        }
+
+        function updateIndustryModeUI(mode) {
+            const btns = { general: 'mode-btn-general', medical: 'mode-btn-medical', grocery: 'mode-btn-grocery' };
+            Object.entries(btns).forEach(([key, id]) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.classList.remove('active', 'active-medical', 'active-grocery');
+                if (key === mode) {
+                    if (mode === 'medical') btn.classList.add('active-medical');
+                    else if (mode === 'grocery') btn.classList.add('active-grocery');
+                    else btn.classList.add('active');
+                }
+            });
+            const desc = document.getElementById('industry-mode-description');
+            if (desc) {
+                const descriptions = {
+                    general: '🏪 <strong>General</strong> — Standard billing for any business.',
+                    medical: '💊 <strong>Medical</strong> — Expiry date tracking in inventory, high-risk medicine caution flags in stock and bills.',
+                    grocery: '🛒 <strong>Grocery</strong> — Expiry date tracking and days-since-added indicator for freshness monitoring.'
+                };
+                desc.innerHTML = descriptions[mode] || descriptions.general;
+            }
+        }
+
+        function updateStockFormVisibility() {
+            const mode = getIndustryMode();
+            const industryFields = document.getElementById('stock-industry-fields');
+            const highRiskField = document.getElementById('stock-high-risk-field');
+            if (mode === 'medical' || mode === 'grocery') {
+                industryFields?.classList.remove('hidden');
+            } else {
+                industryFields?.classList.add('hidden');
+            }
+            if (mode === 'medical') {
+                highRiskField?.classList.remove('hidden');
+            } else {
+                highRiskField?.classList.add('hidden');
+            }
+        }
+
         // --- Helper Functions (Optimized) ---
         let toastQueue = [];
         let isToastVisible = false;
@@ -1874,13 +2398,28 @@
             isToastVisible = true;
             const txt = toastQueue.shift();
             const el = document.getElementById('toast-display');
+            const inner = document.getElementById('toast-inner');
             document.getElementById('toast-text').innerText = txt;
-            el.classList.remove('hidden');
             
+            // Color-code by message tone
+            let bg = '#1f2937';
+            if (txt.startsWith('✅') || txt.includes('success') || txt.includes('saved') || txt.includes('added') || txt.includes('updated') || txt.includes('synced')) {
+                bg = '#059669';
+            } else if (txt.startsWith('❌') || txt.includes('failed') || txt.includes('Failed') || txt.includes('Error') || txt.includes('error') || txt.includes('Invalid') || txt.includes('cannot') || txt.includes('Cannot')) {
+                bg = '#dc2626';
+            } else if (txt.startsWith('⚠️') || txt.includes('Insufficient') || txt.includes('warning')) {
+                bg = '#d97706';
+            }
+            if (inner) inner.style.background = bg;
+            
+            // Re-trigger animation
+            if (inner) { inner.classList.remove('animate-toast-up'); void inner.offsetWidth; inner.classList.add('animate-toast-up'); }
+            
+            el.classList.remove('hidden');
             setTimeout(() => {
                 el.classList.add('hidden');
-                setTimeout(displayNextToast, 200);
-            }, 2500);
+                setTimeout(displayNextToast, 150);
+            }, 2200);
         }
 
         function showConfirmation(message) {
@@ -1968,8 +2507,8 @@
                 }
 
                 localStorage.setItem(lsKey, JSON.stringify(dataToStore));
-                // Trigger auto-sync to Firestore on every change
-                if (typeof window.scheduleAutoSync === 'function') {
+                // Trigger auto-sync only for online mode
+                if (shouldAutoSync()) {
                     window.scheduleAutoSync();
                 }
             } catch (error) {
@@ -2267,12 +2806,12 @@
             element.className = `stat-change ${isPositive ? 'positive' : 'negative'}`;
             element.innerHTML = `
                 <i class="material-icons text-sm">${isPositive ? 'arrow_upward' : 'arrow_downward'}</i>
-                <span>${Math.abs(change).toFixed(1)}% from previous period</span>
+                <span>${Math.abs(change).toFixed(1)}% vs prev</span>
             `;
             
             if (type === 'stock') {
                 const lowStockCount = stock.filter(item => item.quantity <= 5).length;
-                element.querySelector('span').textContent = `${lowStockCount} items need restocking`;
+                element.querySelector('span').textContent = `${lowStockCount} need restock`;
             }
         }
 
@@ -2630,8 +3169,16 @@
         function updateProductsTable() {
             const container = document.getElementById('bill-items-container');
             container.innerHTML = '';
+            const mode = getIndustryMode();
             
             currentItems.forEach((item, index) => {
+                // Check if this product is a high-risk medicine
+                const stockMatch = stock.find(s => s.name.toLowerCase() === item.product.trim().toLowerCase());
+                const isMedicalRisk = mode === 'medical' && stockMatch && stockMatch.isHighRisk;
+                const cautionHtml = isMedicalRisk
+                    ? `<span class="caution-badge"><i class="material-icons" style="font-size:0.8rem;">warning</i>CAUTION</span>`
+                    : '';
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td class="py-3 px-4">
@@ -2639,17 +3186,18 @@
                             <input type="text" data-field="product" data-index="${index}" value="${item.product}"
                                 class="block w-full px-4 py-3 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                 style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" placeholder="Product Name" required />
+                            ${cautionHtml}
                         </div>
                     </td>
-                    <td class="py-3 px-4">
+                    <td class="py-3 px-4" data-label="Qty">
                         <input type="number" data-field="quantity" data-index="${index}" value="${item.quantity || ''}" step="1" min="1"
                             class="block w-full px-4 py-3 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                            style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required />
+                            style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" placeholder="Qty" required />
                     </td>
-                    <td class="py-3 px-4">
+                    <td class="py-3 px-4" data-label="Price">
                         <input type="number" data-field="pricePerUnit" data-index="${index}" value="${item.pricePerUnit || ''}" step="0.01"
                             class="block w-full px-4 py-3 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                            style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" min="0" required />
+                            style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" placeholder="Price" min="0" required />
                     </td>
                     <td class="py-3 px-4 text-right font-medium text-lg">
                         ₹<span class="item-total">${item.total.toFixed(2)}</span>
@@ -2923,6 +3471,8 @@
 
         // --- Stock Management ---
         function renderStock() {
+            updateStockFormVisibility();
+            const mode = getIndustryMode();
             const stockTableBody = document.getElementById('stock-table-body');
             stockTableBody.innerHTML = '';
             
@@ -2942,10 +3492,25 @@
                     row.dataset.stockId = item.id;
                     
                     if (item.isEditing) {
+                        const showExtraFields = mode === 'medical' || mode === 'grocery';
+                        const showHighRisk = mode === 'medical';
                         row.innerHTML = `
                             <td class="p-8">
                                 <input type="text" data-field="name" value="${item.name}"
                                     class="block w-full px-4 py-3 bg-gray-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-black transition-all" />
+                                ${showExtraFields ? `
+                                    <div class="mt-2 space-y-1">
+                                        <label class="text-[10px] font-black uppercase" style="color: var(--text-tertiary);">Expiry Date</label>
+                                        <input type="date" data-field="expiryDate" value="${item.expiryDate || ''}"
+                                            class="block w-full px-4 py-2 bg-gray-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-black transition-all" />
+                                    </div>
+                                ` : ''}
+                                ${showHighRisk ? `
+                                    <div class="flex items-center gap-2 mt-2 p-2 rounded-xl" style="background-color:rgba(239,68,68,0.07);">
+                                        <input type="checkbox" data-field="isHighRisk" ${item.isHighRisk ? 'checked' : ''} class="h-4 w-4" style="accent-color:#ef4444;">
+                                        <label class="text-xs font-bold" style="color:#dc2626;">⚠️ High Risk Medicine</label>
+                                    </div>
+                                ` : ''}
                             </td>
                             <td class="p-8">
                                 <input type="number" data-field="price" value="${item.price}" step="0.01" min="0"
@@ -2964,8 +3529,36 @@
                         `;
                     } else {
                         const isLowStock = item.quantity <= 5;
+
+                        // Build expiry/freshness badge
+                        let expiryBadgeHtml = '';
+                        if ((mode === 'medical' || mode === 'grocery') && item.expiryDate) {
+                            const expDate = new Date(item.expiryDate);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const diffDays = Math.ceil((expDate - today) / 86400000);
+                            if (diffDays < 0) {
+                                expiryBadgeHtml = `<span class="expiry-badge expired">⛔ Expired ${Math.abs(diffDays)} days ago</span>`;
+                            } else if (diffDays <= 30) {
+                                expiryBadgeHtml = `<span class="expiry-badge warn">⚠️ Expires in ${diffDays}d</span>`;
+                            } else {
+                                expiryBadgeHtml = `<span class="expiry-badge ok">✅ Expires ${expDate.toLocaleDateString()}</span>`;
+                            }
+                        } else if (mode === 'grocery' && item.dateAdded) {
+                            const addedDays = Math.floor((Date.now() - new Date(item.dateAdded)) / 86400000);
+                            expiryBadgeHtml = `<span class="expiry-badge grocery">🗓 Added ${addedDays} day${addedDays !== 1 ? 's' : ''} ago</span>`;
+                        }
+
+                        // High-risk caution badge (medical only)
+                        const cautionBadgeHtml = (mode === 'medical' && item.isHighRisk)
+                            ? `<span class="caution-badge"><i class="material-icons" style="font-size:0.85rem;">warning</i>HIGH RISK</span>`
+                            : '';
+
                         row.innerHTML = `
-                            <td class="p-8 font-black text-sm">${item.name}</td>
+                            <td class="p-8 font-black text-sm">
+                                <div>${item.name}${cautionBadgeHtml}</div>
+                                ${expiryBadgeHtml ? `<div>${expiryBadgeHtml}</div>` : ''}
+                            </td>
                             <td class="p-8 font-bold text-gray-500">₹${item.price.toFixed(2)}</td>
                             <td class="p-8">
                                 <span class="px-4 py-2 rounded-xl text-sm font-bold ${isLowStock ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}">
@@ -3045,7 +3638,10 @@
                 name: productName,
                 price: productPrice,
                 quantity: productQuantity,
-                isEditing: false
+                isEditing: false,
+                dateAdded: new Date().toISOString(),
+                expiryDate: document.getElementById('stockExpiryDate')?.value || '',
+                isHighRisk: document.getElementById('stockHighRisk')?.checked || false
             };
             
             stock.push(newStockItem);
@@ -3056,6 +3652,10 @@
             document.getElementById('stockProductName').value = '';
             document.getElementById('stockProductPrice').value = '';
             document.getElementById('stockProductQuantity').value = '';
+            const expiryInput = document.getElementById('stockExpiryDate');
+            if (expiryInput) expiryInput.value = '';
+            const highRiskInput = document.getElementById('stockHighRisk');
+            if (highRiskInput) highRiskInput.checked = false;
             renderStock();
         });
 
@@ -3074,6 +3674,8 @@
                 const nameInput = row.querySelector('input[data-field="name"]');
                 const priceInput = row.querySelector('input[data-field="price"]');
                 const quantityInput = row.querySelector('input[data-field="quantity"]');
+                const expiryInput = row.querySelector('input[data-field="expiryDate"]');
+                const highRiskInput = row.querySelector('input[data-field="isHighRisk"]');
 
                 const newName = nameInput.value.trim();
                 const newPrice = parseFloat(priceInput.value);
@@ -3102,6 +3704,12 @@
                 stock[itemIndex].price = newPrice;
                 stock[itemIndex].quantity = newQuantity;
                 stock[itemIndex].isEditing = false;
+                if (expiryInput != null) {
+                    stock[itemIndex].expiryDate = expiryInput.value || '';
+                }
+                if (highRiskInput != null) {
+                    stock[itemIndex].isHighRisk = highRiskInput.checked;
+                }
                 // Preserve barcode when editing
                 if (!stock[itemIndex].barcode) {
                     stock[itemIndex].barcode = generateBarcodeNumber();
@@ -3358,7 +3966,10 @@
             if (isCompleted) {
                 actionsHtml = `
                     <button onclick="handlePrintBill('${order.id}', 'photo')" class="bg-black text-white px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-800 transition-colors shadow-sm flex items-center justify-center gap-2">
-                        <i class="material-icons">image</i> Export Photo
+                        <i class="material-icons">download</i> Download
+                    </button>
+                    <button onclick="handlePrintBill('${order.id}', 'print')" class="bg-gray-100 px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-200 transition-colors shadow-sm flex items-center justify-center gap-2" style="background-color:var(--bg-tertiary);color:var(--text-primary);">
+                        <i class="material-icons">print</i> Print
                     </button>
                     <button onclick="handleToggleDelivered('${order.id}', true)" class="bg-gray-600 text-white px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-700 transition-colors shadow-sm flex items-center justify-center gap-2">
                         <i class="material-icons">unarchive</i> Move to Active
@@ -3424,7 +4035,10 @@
                 } else {
                     actionsHtml = `
                         <button onclick="handlePrintBill('${order.id}', 'photo')" class="bg-black text-white px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-800 transition-colors shadow-sm flex items-center justify-center gap-2">
-                            <i class="material-icons">image</i> Photo
+                            <i class="material-icons">download</i> Download
+                        </button>
+                        <button onclick="handlePrintBill('${order.id}', 'print')" class="bg-gray-100 px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-200 transition-colors shadow-sm flex items-center justify-center gap-2" style="background-color:var(--bg-tertiary);color:var(--text-primary);">
+                            <i class="material-icons">print</i> Print
                         </button>
                         <button onclick="handleEditOrder('${order.id}')" class="bg-gray-600 text-white px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-700 transition-colors shadow-sm flex items-center justify-center gap-2">
                             <i class="material-icons">edit</i> Edit
@@ -3775,108 +4389,157 @@
         window.handlePrintBill = async (orderId, format) => {
             const order = orders.find(o => o.id === orderId) || completedOrders.find(o => o.id === orderId);
             if (!order) {
-                showToast("Order not found for printing.");
+                showToast("Order not found.");
                 return;
             }
 
-            if (typeof window.html2canvas === 'undefined') {
-                showToast("Loading image export library...");
+            // html2canvas is only needed for PNG download, not for print
+            if (format === 'photo' && typeof window.html2canvas === 'undefined') {
+                showToast("Loading export library…");
                 try {
                     await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
                 } catch (error) {
-                    console.error("Error loading html2canvas library:", error);
-                    showToast(`Image export features are not available. ${error.message}`);
+                    showToast(`❌ Export library unavailable: ${error.message}`);
                     return;
                 }
             }
 
             const billToPrintDiv = document.getElementById('bill-to-print');
-            const dateOptions = {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            };
-            const timeOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            };
-
-            const billNotes = companyDetails.defaultBillNotes || '';
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit' };
+            const billNotes   = companyDetails.defaultBillNotes || '';
+            const invoiceNo   = (order.id || '').toString().slice(-8).toUpperCase();
+            const invoiceDate = new Date(order.orderDate).toLocaleDateString(undefined, dateOptions);
+            const invoiceTime = new Date(order.orderDate).toLocaleTimeString(undefined, timeOptions);
+            const co          = companyDetails;
 
             billToPrintDiv.innerHTML = `
-                <div class="p-8 bg-white text-black" style="min-height: 297mm; width: 210mm; box-sizing: border-box; font-family: 'Inter', sans-serif; position: relative; color: #1f2937; background: #ffffff;">
-                    <!-- Header - Friendly Design -->
-                    <div style="border: 2px solid #e5e7eb; border-radius: 1rem; padding: 2rem; margin-bottom: 2rem; background: #f9fafb;">
-                        <h1 style="font-size: 1.75rem; font-weight: 700; color: #111827; text-align: center; margin: 0 0 1rem 0; letter-spacing: -0.02em;">
-                            ${companyDetails.companyName || 'QuickBill Pro'}
-                        </h1>
-                        <div style="text-align: center; color: #4b5563; font-size: 0.875rem; line-height: 1.8;">
-                            ${companyDetails.address ? `<p style="margin: 0.3rem 0; color: #4b5563;">${companyDetails.address}</p>` : ''}
-                            ${companyDetails.phone ? `<p style="margin: 0.3rem 0; color: #4b5563;">Phone: ${companyDetails.phone}</p>` : ''}
-                            ${companyDetails.email ? `<p style="margin: 0.3rem 0; color: #4b5563;">Email: ${companyDetails.email}</p>` : ''}
-                            ${companyDetails.gstNumber ? `<p style="margin: 0.3rem 0; color: #111827; font-weight: 600;">GSTIN: ${companyDetails.gstNumber}</p>` : ''}
-                        </div>
-                    </div>
+            <div style="width:210mm;min-height:297mm;box-sizing:border-box;background:#ffffff;font-family:'Inter',system-ui,sans-serif;color:#1e293b;font-size:13px;line-height:1.5;">
 
-                    <!-- Bill Info Section - Friendly Design -->
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 2rem; padding: 1.5rem; border: 2px solid #e5e7eb; border-radius: 1rem; background: #ffffff;">
-                        <div style="flex: 1;">
-                            <p style="font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; margin: 0 0 0.5rem 0; letter-spacing: 0.05em;">Bill To</p>
-                            <p style="font-size: 1.125rem; font-weight: 700; color: #111827; margin: 0;">${order.buyerName}</p>
-                        </div>
-                        <div style="text-align: right;">
-                            <p style="font-size: 0.8125rem; color: #4b5563; margin: 0.3rem 0;">Date: ${new Date(order.orderDate).toLocaleDateString(undefined, dateOptions)}</p>
-                            <p style="font-size: 0.8125rem; color: #4b5563; margin: 0.3rem 0;">Time: ${new Date(order.orderDate).toLocaleTimeString(undefined, timeOptions)}</p>
-                            <p style="font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0.5rem 0 0 0;">Bill ID: #${order.id || 'N/A'}</p>
-                        </div>
-                    </div>
-
-                    <!-- Items Table - Friendly Design -->
-                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 2rem; border-radius: 0.75rem; overflow: hidden; border: 2px solid #e5e7eb;">
-                        <thead>
-                            <tr style="background: #f9fafb;">
-                                <th style="padding: 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Product</th>
-                                <th style="padding: 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Qty</th>
-                                <th style="padding: 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Price/Unit</th>
-                                <th style="padding: 1rem; text-align: right; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody style="background: #ffffff;">
-                            ${order.items.map((item, index) => `
-                                <tr style="${index < order.items.length - 1 ? 'border-bottom: 1px solid #e5e7eb;' : ''}">
-                                    <td style="padding: 1rem; font-size: 0.9rem; font-weight: 500; color: #111827;">${item.product}</td>
-                                    <td style="padding: 1rem; text-align: center; font-size: 0.9rem; color: #4b5563;">${item.quantity}</td>
-                                    <td style="padding: 1rem; text-align: center; font-size: 0.9rem; color: #4b5563;">₹${item.pricePerUnit.toFixed(2)}</td>
-                                    <td style="padding: 1rem; text-align: right; font-size: 0.9rem; font-weight: 600; color: #111827;">₹${item.total.toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-
-                    <!-- Grand Total Section - Friendly Design -->
-                    <div style="display: flex; justify-content: flex-end; margin-bottom: 2rem;">
-                        <div style="border: 2px solid #111827; border-radius: 0.75rem; padding: 1.25rem 2rem; background: #f9fafb;">
-                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Grand Total</p>
-                            <p style="font-size: 1.75rem; font-weight: 700; color: #111827; margin: 0;">₹${order.grandTotal.toFixed(2)}</p>
-                        </div>
-                    </div>
-
-                    ${billNotes ? `
-                        <div style="border: 2px solid #e5e7eb; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 2rem; background: #f9fafb;">
-                            <p style="font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; margin: 0 0 0.75rem 0; letter-spacing: 0.05em;">Notes</p>
-                            <p style="font-size: 0.875rem; color: #4b5563; margin: 0; line-height: 1.7;">${billNotes}</p>
-                        </div>
-                    ` : ''}
-
-                    <!-- Footer - Friendly -->
-                    <div style="position: absolute; bottom: 1rem; left: 0; right: 0; border-top: 2px solid #e5e7eb; padding-top: 1rem; text-align: center;">
-                        <p style="font-size: 0.75rem; color: #9ca3af; margin: 0;">Generated with QuickBill Pro</p>
-                    </div>
+              <!-- ── Top header bar ── -->
+              <div style="background:#0f172a;padding:28px 36px;display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                  <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.4px;margin-bottom:4px;">
+                    ${co.companyName || 'QuickBill Pro'}
+                  </div>
+                  ${co.address ? `<div style="color:#94a3b8;font-size:11.5px;margin-top:2px;">${co.address}</div>` : ''}
+                  ${co.phone   ? `<div style="color:#94a3b8;font-size:11.5px;">Tel: ${co.phone}</div>` : ''}
+                  ${co.email   ? `<div style="color:#94a3b8;font-size:11.5px;">${co.email}</div>` : ''}
+                  ${co.gstNumber ? `<div style="color:#cbd5e1;font-size:11.5px;font-weight:600;margin-top:4px;">GSTIN: ${co.gstNumber}</div>` : ''}
                 </div>
-            `;
-            billToPrintDiv.classList.add('visible-for-capture');
+                <div style="text-align:right;">
+                  <div style="font-size:28px;font-weight:900;color:#ffffff;letter-spacing:2px;text-transform:uppercase;">Invoice</div>
+                  <div style="color:#94a3b8;font-size:11.5px;margin-top:6px;">#${invoiceNo}</div>
+                </div>
+              </div>
 
+              <!-- ── Invoice meta row ── -->
+              <div style="display:flex;border-bottom:1px solid #e2e8f0;">
+                <!-- Bill To -->
+                <div style="flex:1;padding:20px 36px;border-right:1px solid #e2e8f0;">
+                  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;margin-bottom:6px;">Bill To</div>
+                  <div style="font-size:15px;font-weight:700;color:#0f172a;">${order.buyerName}</div>
+                </div>
+                <!-- Invoice details -->
+                <div style="padding:20px 36px;min-width:200px;">
+                  <table style="border:none;border-collapse:collapse;width:100%;font-size:12px;">
+                    <tr>
+                      <td style="color:#64748b;padding:2px 0;padding-right:16px;white-space:nowrap;">Invoice Date</td>
+                      <td style="color:#0f172a;font-weight:600;text-align:right;">${invoiceDate}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:#64748b;padding:2px 0;padding-right:16px;white-space:nowrap;">Time</td>
+                      <td style="color:#0f172a;font-weight:600;text-align:right;">${invoiceTime}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:#64748b;padding:2px 0;padding-right:16px;white-space:nowrap;">Invoice No.</td>
+                      <td style="color:#0f172a;font-weight:700;text-align:right;">#${invoiceNo}</td>
+                    </tr>
+                    ${co.gstNumber ? `
+                    <tr>
+                      <td style="color:#64748b;padding:2px 0;padding-right:16px;white-space:nowrap;">GSTIN</td>
+                      <td style="color:#0f172a;font-weight:600;text-align:right;">${co.gstNumber}</td>
+                    </tr>` : ''}
+                  </table>
+                </div>
+              </div>
+
+              <!-- ── Items table ── -->
+              <div style="padding:0 36px;">
+                <table style="width:100%;border-collapse:collapse;margin-top:24px;">
+                  <thead>
+                    <tr style="background:#0f172a;">
+                      <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.08em;border-radius:0;">#</th>
+                      <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.08em;">Item / Description</th>
+                      <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.08em;">Qty</th>
+                      <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.08em;">Unit Price</th>
+                      <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.08em;">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${order.items.map((item, i) => `
+                      <tr style="background:${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                        <td style="padding:11px 14px;color:#94a3b8;font-size:12px;border-bottom:1px solid #f1f5f9;">${i + 1}</td>
+                        <td style="padding:11px 14px;font-weight:500;color:#0f172a;font-size:13px;border-bottom:1px solid #f1f5f9;">${item.product}</td>
+                        <td style="padding:11px 14px;text-align:center;color:#475569;font-size:13px;border-bottom:1px solid #f1f5f9;">${item.quantity}</td>
+                        <td style="padding:11px 14px;text-align:right;color:#475569;font-size:13px;border-bottom:1px solid #f1f5f9;">₹${item.pricePerUnit.toFixed(2)}</td>
+                        <td style="padding:11px 14px;text-align:right;font-weight:600;color:#0f172a;font-size:13px;border-bottom:1px solid #f1f5f9;">₹${item.total.toFixed(2)}</td>
+                      </tr>`).join('')}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- ── Totals ── -->
+              <div style="display:flex;justify-content:flex-end;padding:0 36px;margin-top:8px;">
+                <table style="border-collapse:collapse;min-width:240px;font-size:13px;">
+                  <tr>
+                    <td style="padding:6px 14px 6px 0;color:#64748b;text-align:right;">Subtotal</td>
+                    <td style="padding:6px 0 6px 24px;text-align:right;color:#0f172a;font-weight:500;">₹${order.grandTotal.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" style="padding:4px 0;">
+                      <div style="border-top:1px solid #e2e8f0;margin:4px 0;"></div>
+                    </td>
+                  </tr>
+                  <tr style="background:#0f172a;">
+                    <td style="padding:12px 14px 12px 16px;color:#e2e8f0;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;text-align:right;border-radius:4px 0 0 4px;">Total Due</td>
+                    <td style="padding:12px 16px 12px 24px;text-align:right;color:#ffffff;font-weight:800;font-size:17px;border-radius:0 4px 4px 0;">₹${order.grandTotal.toFixed(2)}</td>
+                  </tr>
+                </table>
+              </div>
+
+              ${billNotes ? `
+              <!-- ── Notes ── -->
+              <div style="margin:24px 36px 0;padding:16px 20px;background:#f8fafc;border-left:3px solid #0f172a;border-radius:0 6px 6px 0;">
+                <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;margin-bottom:6px;">Notes</div>
+                <div style="color:#374151;font-size:12.5px;line-height:1.7;">${billNotes}</div>
+              </div>` : ''}
+
+              <!-- ── Footer ── -->
+              <div style="margin:32px 36px 0;padding-top:16px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:11px;color:#94a3b8;">
+                  ${co.companyName ? `<strong style="color:#475569;">${co.companyName}</strong>${co.phone ? ` &nbsp;·&nbsp; ${co.phone}` : ''}${co.email ? ` &nbsp;·&nbsp; ${co.email}` : ''}` : ''}
+                </div>
+                <div style="font-size:11px;color:#cbd5e1;">Generated with QuickBill Pro</div>
+              </div>
+              <div style="text-align:center;padding:18px 36px 28px;font-size:12px;color:#64748b;font-style:italic;">
+                Thank you for your business!
+              </div>
+
+            </div>
+            `;
+
+            if (format === 'print') {
+                // Use browser native print — no html2canvas needed
+                window.addEventListener('afterprint', () => {
+                    billToPrintDiv.innerHTML = '';
+                }, { once: true });
+                window.print();
+                return;
+            }
+
+            // PNG download via html2canvas
+            billToPrintDiv.classList.add('visible-for-capture');
             setTimeout(async () => {
                 try {
                     const canvas = await window.html2canvas(billToPrintDiv.firstElementChild, {
@@ -3884,22 +4547,17 @@
                         useCORS: true,
                         logging: false,
                     });
-
-                    if (format === 'photo') {
-                        const imgData = canvas.toDataURL('image/png');
-                        const link = document.createElement('a');
-                        link.href = imgData;
-                        link.download = `${order.buyerName}_Bill_${new Date(order.orderDate).toLocaleDateString().replace(/\//g, '-')}.png`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        showToast("Bill exported as photo!");
-                    } else {
-                        showToast("Only photo export is supported.");
-                    }
+                    const imgData = canvas.toDataURL('image/png');
+                    const link = document.createElement('a');
+                    link.href = imgData;
+                    link.download = `${order.buyerName}_Bill_${new Date(order.orderDate).toLocaleDateString().replace(/\//g, '-')}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showToast("✅ Bill downloaded!");
                 } catch (error) {
                     console.error("Error generating bill:", error);
-                    showToast("Failed to generate bill. Please try again.");
+                    showToast("❌ Failed to generate bill. Please try again.");
                 } finally {
                     billToPrintDiv.classList.remove('visible-for-capture');
                     billToPrintDiv.innerHTML = '';
@@ -4276,7 +4934,11 @@
             document.getElementById('gstNumber').value = companyDetails.gstNumber || '';
             document.getElementById('defaultBillNotes').value = companyDetails.defaultBillNotes || '';
             
-            // Update auth UI
+            // Update industry mode UI
+            updateIndustryModeUI(getIndustryMode());
+
+            // Update connection mode UI
+            updateConnectionModeUI(localStorage.getItem('quickbill-connection-mode') || 'online');
             if (window.firebaseUser) {
                 updateAuthUI(window.firebaseUser);
             }
@@ -4296,7 +4958,8 @@
                 phone: document.getElementById('phone').value.trim(),
                 email: document.getElementById('email').value.trim(),
                 gstNumber: document.getElementById('gstNumber').value.trim(),
-                defaultBillNotes: document.getElementById('defaultBillNotes').value.trim()
+                defaultBillNotes: document.getElementById('defaultBillNotes').value.trim(),
+                industryMode: companyDetails.industryMode || 'general'
             };
             
             saveDataToLocalStorage('companyDetails', companyDetails);
@@ -4372,6 +5035,7 @@
                         companyDetails = {
                             gstNumber: '',
                             defaultBillNotes: '',
+                            industryMode: 'general',
                             ...importedData.companyDetails
                         };
 
@@ -4525,6 +5189,8 @@
 
                     // Load data from localStorage
                     companyDetails = { ...companyDetails, ...loadDataFromLocalStorage('companyDetails', {}) };
+                    // Ensure industryMode is preserved
+                    if (!companyDetails.industryMode) companyDetails.industryMode = 'general';
 
                     const storedOrders = loadDataFromLocalStorage('orders', []);
                     const processedOrders = storedOrders.map(order => ({
@@ -4568,9 +5234,27 @@
                             loadingOverlay.style.opacity = '0';
                             setTimeout(() => {
                                 loadingOverlay.classList.add('hidden');
-                                console.log('Rendering dashboard...');
-                                renderPage('dashboard');
-                                console.log('App loaded successfully!');
+
+                                const isSetupComplete = localStorage.getItem('quickbill-setup-complete');
+                                const connMode = localStorage.getItem('quickbill-connection-mode') || 'online';
+                                // Welcome-back only when setup is done, mode is online, AND the user
+                                // has NO real Firebase account (uid starts with anonymous prefix or
+                                // firebaseUser.isAnonymous — meaning the named account session is gone)
+                                const hasNamedAccount = window.firebaseUser && !window.firebaseUser.isAnonymous;
+                                const shouldShowWelcomeBack = connMode === 'online' && !hasNamedAccount;
+
+                                if (!isSetupComplete) {
+                                    // First-time user → onboarding
+                                    showOnboarding();
+                                } else if (shouldShowWelcomeBack) {
+                                    // Returning online user — no active named account → welcome-back
+                                    const wb = document.getElementById('welcome-back-overlay');
+                                    if (wb) { wb.style.display = 'flex'; }
+                                } else {
+                                    console.log('Rendering dashboard...');
+                                    renderPage('dashboard');
+                                    console.log('App loaded successfully!');
+                                }
                             }, 250);
                         } else {
                             console.error('Loading overlay element not found!');
@@ -4619,6 +5303,246 @@
 
         // Search functionality
         document.getElementById('order-search-input').addEventListener('input', renderAllOrders);
+
+        // ═══════════════════════════════════════════════════════════
+        //  ONBOARDING
+        // ═══════════════════════════════════════════════════════════
+
+        // Capture install prompt as early as possible
+        window._deferredInstallPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            window._deferredInstallPrompt = e;
+        });
+
+        let _obSelectedIndustry = 'general';
+
+        /** Strip Firebase noise from error messages */
+        function cleanFirebaseError(msg) {
+            return (msg || '').replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '').trim();
+        }
+
+        /** True when auto-sync should run */
+        function shouldAutoSync() {
+            return localStorage.getItem('quickbill-connection-mode') !== 'offline' &&
+                   typeof window.scheduleAutoSync === 'function';
+        }
+
+        function showOnboarding() {
+            const overlay = document.getElementById('onboarding-overlay');
+            if (overlay) overlay.classList.remove('hidden');
+        }
+
+        function obGoStep(n) {
+            document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(`ob-step-${n}`);
+            if (target) target.classList.add('active');
+        }
+
+        function obChooseMode(mode) {
+            localStorage.setItem('quickbill-connection-mode', mode);
+            if (mode === 'online') {
+                obGoStep(2);
+            } else {
+                obGoStep(3);
+            }
+        }
+
+        async function obHandleGoogle() {
+            if (!window.firebaseSignInWithGoogle) { obGoStep(3); return; }
+            const err = document.getElementById('ob-auth-error');
+            err.classList.add('hidden');
+            const result = await window.firebaseSignInWithGoogle();
+            if (result.success) {
+                obGoStep(3);
+            } else {
+                err.textContent = cleanFirebaseError(result.error);
+                err.classList.remove('hidden');
+            }
+        }
+
+        async function obHandleSignIn() {
+            const email    = document.getElementById('ob-email').value.trim();
+            const password = document.getElementById('ob-password').value;
+            const err      = document.getElementById('ob-auth-error');
+            err.classList.add('hidden');
+            if (!email || !password) {
+                err.textContent = 'Please enter your email and password.';
+                err.classList.remove('hidden');
+                return;
+            }
+            if (!window.firebaseSignInWithEmail) { obGoStep(3); return; }
+            const result = await window.firebaseSignInWithEmail(email, password);
+            if (result.success) {
+                obGoStep(3);
+            } else {
+                err.textContent = cleanFirebaseError(result.error);
+                err.classList.remove('hidden');
+            }
+        }
+
+        async function obHandleSignUp() {
+            const email    = document.getElementById('ob-email').value.trim();
+            const password = document.getElementById('ob-password').value;
+            const err      = document.getElementById('ob-auth-error');
+            err.classList.add('hidden');
+            if (!email || !password) {
+                err.textContent = 'Please enter your email and password.';
+                err.classList.remove('hidden');
+                return;
+            }
+            if (password.length < 6) {
+                err.textContent = 'Password must be at least 6 characters.';
+                err.classList.remove('hidden');
+                return;
+            }
+            if (!window.firebaseSignUpWithEmail) { obGoStep(3); return; }
+            const result = await window.firebaseSignUpWithEmail(email, password);
+            if (result.success) {
+                obGoStep(3);
+            } else {
+                err.textContent = cleanFirebaseError(result.error);
+                err.classList.remove('hidden');
+            }
+        }
+
+        function obSetIndustry(mode) {
+            _obSelectedIndustry = mode;
+            ['general', 'medical', 'grocery'].forEach(k => {
+                const btn = document.getElementById(`ob-ind-${k}`);
+                if (btn) btn.classList.remove('active', 'active-medical', 'active-grocery');
+            });
+            const chosen = document.getElementById(`ob-ind-${mode}`);
+            if (chosen) {
+                if (mode === 'medical') chosen.classList.add('active-medical');
+                else if (mode === 'grocery') chosen.classList.add('active-grocery');
+                else chosen.classList.add('active');
+            }
+        }
+
+        // Called after Step 3 — go to install step if prompt is available, else finish
+        function obComplete() {
+            // Persist company details entered in onboarding into the global companyDetails
+            const name  = document.getElementById('ob-company-name')?.value.trim() || '';
+            const phone = document.getElementById('ob-phone')?.value.trim() || '';
+            if (name)  companyDetails.companyName = name;   // companyDetails is the app-global object
+            if (phone) companyDetails.phone       = phone;
+            companyDetails.industryMode = _obSelectedIndustry;
+            saveDataToLocalStorage('companyDetails', companyDetails);
+
+            // Decide whether to show install step
+            if (window._deferredInstallPrompt) {
+                obGoStep(4);
+            } else {
+                obFinish();
+            }
+        }
+
+        async function obTriggerInstall() {
+            const prompt = window._deferredInstallPrompt;
+            if (!prompt) { obFinish(); return; }
+            prompt.prompt();
+            const { outcome } = await prompt.userChoice;
+            window._deferredInstallPrompt = null;
+            if (outcome === 'accepted') {
+                showToast('✅ App installed!');
+            }
+            obFinish();
+        }
+
+        function obFinish() {
+            localStorage.setItem('quickbill-setup-complete', '1');
+            const overlay = document.getElementById('onboarding-overlay');
+            if (overlay) overlay.classList.add('hidden');
+            updateIndustryModeUI(_obSelectedIndustry);
+            renderPage('dashboard');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  CONNECTION MODE (Settings card)
+        // ═══════════════════════════════════════════════════════════
+
+        function setConnectionMode(mode) {
+            localStorage.setItem('quickbill-connection-mode', mode);
+            updateConnectionModeUI(mode);
+            if (mode === 'online') {
+                showToast('☁️ Online mode — data will sync to cloud when signed in');
+            } else {
+                showToast('📱 Offline mode — data stays on this device only');
+            }
+        }
+
+        function updateConnectionModeUI(mode) {
+            const onlineBtn  = document.getElementById('conn-btn-online');
+            const offlineBtn = document.getElementById('conn-btn-offline');
+            if (!onlineBtn) return;
+            onlineBtn.classList.remove('active');
+            offlineBtn.classList.remove('active');
+            if (mode === 'online') onlineBtn.classList.add('active');
+            else                   offlineBtn.classList.add('active');
+
+            const desc = document.getElementById('conn-mode-description');
+            if (desc) {
+                desc.innerHTML = mode === 'online'
+                    ? '☁️ <strong>Online</strong> — Data is backed up to the cloud and syncs across all your signed-in devices.'
+                    : '📱 <strong>Offline</strong> — All data lives on this device only. No account required. Switch to Online any time to enable sync.';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  WELCOME-BACK MODAL (returning online user, session lapsed)
+        // ═══════════════════════════════════════════════════════════
+
+        async function wbHandleGoogle() {
+            if (!window.firebaseSignInWithGoogle) { wbContinueOffline(); return; }
+            const result = await window.firebaseSignInWithGoogle();
+            if (result.success) {
+                location.reload();
+            } else {
+                const err = document.getElementById('wb-auth-error');
+                err.textContent = cleanFirebaseError(result.error);
+                err.classList.remove('hidden');
+            }
+        }
+
+        async function wbHandleSignIn() {
+            const email    = document.getElementById('wb-email').value.trim();
+            const password = document.getElementById('wb-password').value;
+            const err      = document.getElementById('wb-auth-error');
+            err.classList.add('hidden');
+            if (!email || !password) {
+                err.textContent = 'Please enter your email and password.';
+                err.classList.remove('hidden');
+                return;
+            }
+            const result = await window.firebaseSignInWithEmail(email, password);
+            if (result.success) {
+                location.reload();
+            } else {
+                err.textContent = cleanFirebaseError(result.error);
+                err.classList.remove('hidden');
+            }
+        }
+
+        function wbContinueOffline() {
+            // User opts to continue with local data; switch to offline so no sync is attempted
+            localStorage.setItem('quickbill-connection-mode', 'offline');
+            const wb = document.getElementById('welcome-back-overlay');
+            if (wb) wb.style.display = 'none';
+            renderPage('dashboard');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  AUTO-RECONNECT SYNC (online users, wifi comes back)
+        // ═══════════════════════════════════════════════════════════
+
+        window.addEventListener('online', () => {
+            if (shouldAutoSync() &&
+                window.firebaseUser && !window.firebaseUser.isAnonymous) {
+                showToast('✅ Back online — syncing…');
+                window.scheduleAutoSync();
+            }
+        });
     </script>
 </body>
 </html>
