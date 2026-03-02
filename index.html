@@ -5442,20 +5442,32 @@
             // Setup confirmation modal first
             setupConfirmationModal();
             
+            // Guard against double-initialization (can happen if Firebase resolves after the timeout)
+            let _appInitialized = false;
+
             // Wait for Firebase or use demo mode
             const initializeApp = () => {
+                if (_appInitialized) return;
+                _appInitialized = true;
+
                 try {
                     // Load dark mode preference first
                     loadDarkMode();
                     console.log('Dark mode loaded');
                     
-                    // Use Firebase userId if available, otherwise generate demo ID
+                    // Use Firebase userId if available, otherwise use a stable persistent local ID
                     if (window.isFirebaseReady && window.firebaseUserId) {
                         userId = window.firebaseUserId;
                         console.log('Using Firebase user ID:', userId);
                     } else {
-                        userId = 'demo-user-' + Math.random().toString(36).substr(2, 9);
-                        console.log('Using demo user ID:', userId);
+                        // Retrieve or create a persistent ID so data survives page refreshes
+                        let persistedId = localStorage.getItem('quickbill-local-user-id');
+                        if (!persistedId) {
+                            persistedId = 'local-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+                            localStorage.setItem('quickbill-local-user-id', persistedId);
+                        }
+                        userId = persistedId;
+                        console.log('Using persistent local user ID:', userId);
                     }
                     
                     
