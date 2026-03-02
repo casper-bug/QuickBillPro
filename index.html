@@ -30,6 +30,7 @@
     <style>
         /* CSS Variables for Dark Mode */
         :root {
+            color-scheme: light;
             --bg-primary: #f9fafb;
             --bg-secondary: #ffffff;
             --bg-tertiary: #f3f4f6;
@@ -47,9 +48,11 @@
             --nav-active: #000000;
             --logo-bg: #000000;
             --card-bg: #ffffff;
+            --toast-bg: #1f2937;
         }
         
         [data-theme="dark"] {
+            color-scheme: dark;
             --bg-primary: #0a0f1e;
             --bg-secondary: #111827;
             --bg-tertiary: #1f2937;
@@ -67,7 +70,30 @@
             --nav-active: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             --logo-bg: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
             --card-bg: #111827;
+            --toast-bg: #374151;
         }
+
+        /* Tailwind utility class overrides for dark mode —
+           these correct the hardcoded gray/white Tailwind classes used
+           throughout JS-generated HTML so they adopt the theme palette. */
+        [data-theme="dark"] .text-gray-400 { color: var(--text-tertiary); }
+        [data-theme="dark"] .text-gray-500 { color: var(--text-secondary); }
+        [data-theme="dark"] .text-gray-600 { color: var(--text-secondary); }
+        [data-theme="dark"] .text-gray-700 { color: var(--text-primary); }
+        [data-theme="dark"] .text-gray-800 { color: var(--text-primary); }
+        [data-theme="dark"] .bg-white      { background-color: var(--bg-secondary); }
+        [data-theme="dark"] .bg-gray-50    { background-color: var(--bg-tertiary); }
+        [data-theme="dark"] .bg-gray-100   { background-color: var(--bg-tertiary); }
+        [data-theme="dark"] .bg-gray-200   { background-color: var(--bg-tertiary); }
+        [data-theme="dark"] .border-gray-100,
+        [data-theme="dark"] .border-gray-200 { border-color: var(--border-color); }
+        [data-theme="dark"] .bg-green-50   { background-color: rgba(34, 197, 94, 0.15); }
+        [data-theme="dark"] .text-green-600 { color: #4ade80; }
+        [data-theme="dark"] .bg-red-50     { background-color: rgba(239, 68, 68, 0.15); }
+        [data-theme="dark"] .text-red-500  { color: #f87171; }
+        [data-theme="dark"] .hover\:bg-gray-50:hover  { background-color: var(--hover-bg); }
+        [data-theme="dark"] .hover\:bg-gray-100:hover { background-color: var(--bg-tertiary); }
+        [data-theme="dark"] .hover\:bg-gray-200:hover { background-color: var(--bg-tertiary); }
         
         body {
             font-family: 'Inter', sans-serif;
@@ -286,6 +312,24 @@
             padding: 1.5rem;
         }
         #onboarding-overlay.hidden { display: none; }
+
+        #ob-dark-mode-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 10;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            background: var(--bg-secondary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
 
         .ob-card {
             width: 100%;
@@ -823,7 +867,7 @@
         .hamburger-button {
             background: none;
             border: none;
-            color: #111827;
+            color: var(--text-primary);
             font-size: 1.5rem;
             cursor: pointer;
             padding: 0.5rem;
@@ -1381,7 +1425,7 @@
 
     <!-- Toast Notification — bottom, auto-dismiss, no close button -->
     <div id="toast-display" class="fixed bottom-6 left-1/2 z-[6000] hidden pointer-events-none" style="transform: translateX(-50%); min-width: 180px; max-width: min(360px, 90vw);">
-        <div id="toast-inner" class="animate-toast-up flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold text-white" style="background: #1f2937;">
+        <div id="toast-inner" class="animate-toast-up flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold text-white" style="background: var(--toast-bg);">
             <span id="toast-text"></span>
         </div>
     </div>
@@ -1390,6 +1434,9 @@
          Onboarding Overlay (first-time only)
          ════════════════════════════════ -->
     <div id="onboarding-overlay" class="hidden">
+
+        <!-- Dark mode toggle button in top-right corner -->
+        <button onclick="toggleDarkMode()" id="ob-dark-mode-btn" aria-label="Toggle dark/light mode">🌙</button>
 
         <!-- ── Step 0: Welcome ── -->
         <div class="ob-step active" id="ob-step-0">
@@ -2342,6 +2389,7 @@
             const html = document.documentElement;
             const toggle = document.getElementById('dark-mode-toggle');
             const slider = document.getElementById('dark-mode-slider');
+            const obBtn = document.getElementById('ob-dark-mode-btn');
             
             if (darkMode) {
                 html.setAttribute('data-theme', 'dark');
@@ -2350,6 +2398,7 @@
                     slider.style.transform = 'translateX(32px)';
                     slider.style.backgroundColor = '#ffffff';
                 }
+                if (obBtn) obBtn.textContent = '☀️';
             } else {
                 html.removeAttribute('data-theme');
                 if (toggle) toggle.style.backgroundColor = '#cbd5e1';
@@ -2357,13 +2406,28 @@
                     slider.style.transform = 'translateX(0)';
                     slider.style.backgroundColor = '#ffffff';
                 }
+                if (obBtn) obBtn.textContent = '🌙';
             }
         }
         
         function loadDarkMode() {
             const saved = localStorage.getItem('darkMode');
-            darkMode = saved === 'true';
+            if (saved !== null) {
+                darkMode = saved === 'true';
+            } else {
+                // No saved preference — honor the OS/browser setting
+                darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            }
             applyDarkMode();
+
+            // Keep in sync when the OS theme changes (only if the user hasn't
+            // explicitly overridden it inside the app)
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                if (localStorage.getItem('darkMode') === null) {
+                    darkMode = e.matches;
+                    applyDarkMode();
+                }
+            });
         }
 
         // --- Industry Mode Functions ---
@@ -2700,7 +2764,8 @@
                     item.name.substr(matchEnd) +
                     ` <span style="color: #6b7280; font-size: 0.875rem;">(₹${item.price.toFixed(2)})</span>`;
                 
-                suggestionDiv.addEventListener('click', () => {
+                suggestionDiv.addEventListener('mousedown', (e) => {
+                    e.preventDefault(); // Prevent input blur before selection
                     if (isExpiredMedicine(item)) { closeAllLists(); return; }
                     input.value = item.name;
                     currentItems[index].product = item.name;
@@ -5258,6 +5323,7 @@
                         return;
                     }
                 }
+                localStorage.removeItem('quickbill-setup-complete');
                 showToast("All data cleared successfully. Reloading...");
                 setTimeout(() => {
                     location.reload();
