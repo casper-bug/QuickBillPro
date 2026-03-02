@@ -122,14 +122,13 @@
             to { opacity: 1; transform: translate3d(0, 0, 0); }
         }
 
-        /* Fixed Centered Notification */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translate3d(-50%, -15px, 0); }
-            to { opacity: 1; transform: translate3d(-50%, 0, 0); }
+        /* Toast notification — slide up from bottom */
+        @keyframes toastUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-
-        .animate-fade-in-down {
-            animation: fadeInDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        .animate-toast-up {
+            animation: toastUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         .nav-button.active {
@@ -1062,13 +1061,6 @@
                 vertical-align: middle;
             }
             
-            /* Toast notifications */
-            #toast-display {
-                max-width: 90%;
-                padding: 0.75rem 1rem !important;
-                font-size: 0.875rem !important;
-            }
-            
             /* Modal dialogs */
             .modal-content {
                 width: 95%;
@@ -1117,11 +1109,11 @@
             #notes-list {
                 grid-template-columns: 1fr !important;
             }
-            
-            /* Dashboard grid */
+
+            /* Dashboard grid — 2x2 on mobile */
             .dashboard-grid {
-                grid-template-columns: 1fr !important;
-                gap: 1rem !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 0.75rem !important;
             }
             
             /* Settings page */
@@ -1183,6 +1175,26 @@
                 width: 24px !important;
                 height: 24px !important;
             }
+
+            /* Reduce excessive table cell padding on mobile */
+            table th, table td {
+                padding: 0.625rem 0.75rem !important;
+            }
+
+            /* Reduce oversized card padding on mobile */
+            .rounded-\[3rem\] {
+                border-radius: 1.25rem !important;
+                padding: 1rem !important;
+            }
+            .p-10, .p-12 {
+                padding: 1rem !important;
+            }
+
+            /* Stat card value — smaller on tiny screens */
+            .stat-value {
+                font-size: 1.25rem !important;
+                margin: 0.25rem 0 !important;
+            }
         }
     </style>
 </head>
@@ -1210,12 +1222,11 @@
     </div>
 
 
-    <!-- Toast Notification -->
-    <div id="toast-display" class="fixed top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-8 py-4 rounded-2xl shadow-2xl z-[6000] flex items-center gap-4 hidden animate-fade-in-down">
-        <span id="toast-text" class="text-sm font-semibold"></span>
-        <button onclick="this.parentElement.classList.add('hidden')" class="hover:bg-white/10 p-1 rounded-lg">
-            <i class="material-icons text-xl">close</i>
-        </button>
+    <!-- Toast Notification — bottom, auto-dismiss, no close button -->
+    <div id="toast-display" class="fixed bottom-6 left-1/2 z-[6000] hidden pointer-events-none" style="transform: translateX(-50%); min-width: 180px; max-width: min(360px, 90vw);">
+        <div id="toast-inner" class="animate-toast-up flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold text-white" style="background: #1f2937;">
+            <span id="toast-text"></span>
+        </div>
     </div>
 
     <!-- Custom Confirmation Modal -->
@@ -1302,8 +1313,8 @@
     <main class="flex-grow max-w-7xl mx-auto w-full p-4 lg:p-8">
         
         <!-- Dashboard Section -->
-        <div id="page-dashboard" class="page-content space-y-8">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+        <div id="page-dashboard" class="page-content space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <h2 class="text-3xl font-black tracking-tight">Business Hub</h2>
                 <div class="dashboard-date-filter no-print">
                     <button class="date-filter-button active" data-range="7">7D</button>
@@ -1314,42 +1325,42 @@
                 </div>
             </div>
 
-            <div class="dashboard-grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="dashboard-grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
                 <div class="stat-card revenue">
-                    <div class="stat-label">Net Revenue</div>
+                    <div class="stat-label">Revenue</div>
                     <div class="stat-value" id="total-revenue">₹0</div>
                     <div class="stat-change positive" id="revenue-change">
                         <i class="material-icons text-sm">arrow_upward</i>
-                        <span>0% from previous period</span>
+                        <span>0%</span>
                     </div>
                 </div>
                 <div class="stat-card orders">
-                    <div class="stat-label">Total Orders</div>
+                    <div class="stat-label">Orders</div>
                     <div class="stat-value" id="total-orders">0</div>
                     <div class="stat-change positive" id="orders-change">
                         <i class="material-icons text-sm">arrow_upward</i>
-                        <span>0% from previous period</span>
+                        <span>0%</span>
                     </div>
                 </div>
                 <div class="stat-card customers">
-                    <div class="stat-label">Active Customers</div>
+                    <div class="stat-label">Customers</div>
                     <div class="stat-value" id="active-customers">0</div>
                     <div class="stat-change positive" id="customers-change">
                         <i class="material-icons text-sm">arrow_upward</i>
-                        <span>0% from previous period</span>
+                        <span>0%</span>
                     </div>
                 </div>
                 <div class="stat-card stock">
-                    <div class="stat-label">Low Stock Items</div>
+                    <div class="stat-label">Low Stock</div>
                     <div class="stat-value" id="low-stock-count">0</div>
                     <div class="stat-change negative" id="stock-change">
                         <i class="material-icons text-sm">arrow_downward</i>
-                        <span>0 items need restocking</span>
+                        <span>0 need restock</span>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8">
                 <div class="chart-container">
                     <div class="chart-title">Revenue Trend</div>
                     <div class="simple-bar-chart" id="revenue-chart"></div>
@@ -1360,7 +1371,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
                 <div class="chart-container">
                     <div class="chart-title">Top Selling Products</div>
                     <ul class="top-products-list" id="top-products"></ul>
@@ -2045,13 +2056,28 @@
             isToastVisible = true;
             const txt = toastQueue.shift();
             const el = document.getElementById('toast-display');
+            const inner = document.getElementById('toast-inner');
             document.getElementById('toast-text').innerText = txt;
-            el.classList.remove('hidden');
             
+            // Color-code by message tone
+            let bg = '#1f2937';
+            if (txt.startsWith('✅') || txt.includes('success') || txt.includes('saved') || txt.includes('added') || txt.includes('updated') || txt.includes('synced')) {
+                bg = '#059669';
+            } else if (txt.startsWith('❌') || txt.includes('failed') || txt.includes('Failed') || txt.includes('Error') || txt.includes('error') || txt.includes('Invalid') || txt.includes('cannot') || txt.includes('Cannot')) {
+                bg = '#dc2626';
+            } else if (txt.startsWith('⚠️') || txt.includes('Insufficient') || txt.includes('warning')) {
+                bg = '#d97706';
+            }
+            if (inner) inner.style.background = bg;
+            
+            // Re-trigger animation
+            if (inner) { inner.classList.remove('animate-toast-up'); void inner.offsetWidth; inner.classList.add('animate-toast-up'); }
+            
+            el.classList.remove('hidden');
             setTimeout(() => {
                 el.classList.add('hidden');
-                setTimeout(displayNextToast, 200);
-            }, 2500);
+                setTimeout(displayNextToast, 150);
+            }, 2200);
         }
 
         function showConfirmation(message) {
@@ -2438,12 +2464,12 @@
             element.className = `stat-change ${isPositive ? 'positive' : 'negative'}`;
             element.innerHTML = `
                 <i class="material-icons text-sm">${isPositive ? 'arrow_upward' : 'arrow_downward'}</i>
-                <span>${Math.abs(change).toFixed(1)}% from previous period</span>
+                <span>${Math.abs(change).toFixed(1)}% vs prev</span>
             `;
             
             if (type === 'stock') {
                 const lowStockCount = stock.filter(item => item.quantity <= 5).length;
-                element.querySelector('span').textContent = `${lowStockCount} items need restocking`;
+                element.querySelector('span').textContent = `${lowStockCount} need restock`;
             }
         }
 
@@ -3170,15 +3196,15 @@
                             today.setHours(0, 0, 0, 0);
                             const diffDays = Math.ceil((expDate - today) / 86400000);
                             if (diffDays < 0) {
-                                expiryBadgeHtml = `<span class="expiry-badge expired">⛔ Expired ${Math.abs(diffDays)}d ago</span>`;
+                                expiryBadgeHtml = `<span class="expiry-badge expired">⛔ Expired ${Math.abs(diffDays)} days ago</span>`;
                             } else if (diffDays <= 30) {
-                                expiryBadgeHtml = `<span class="expiry-badge warn">⚠️ Exp in ${diffDays}d</span>`;
+                                expiryBadgeHtml = `<span class="expiry-badge warn">⚠️ Expires in ${diffDays}d</span>`;
                             } else {
-                                expiryBadgeHtml = `<span class="expiry-badge ok">✅ Exp ${expDate.toLocaleDateString()}</span>`;
+                                expiryBadgeHtml = `<span class="expiry-badge ok">✅ Expires ${expDate.toLocaleDateString()}</span>`;
                             }
                         } else if (mode === 'grocery' && item.dateAdded) {
                             const addedDays = Math.floor((Date.now() - new Date(item.dateAdded)) / 86400000);
-                            expiryBadgeHtml = `<span class="expiry-badge grocery">🗓 Added ${addedDays}d ago</span>`;
+                            expiryBadgeHtml = `<span class="expiry-badge grocery">🗓 Added ${addedDays} day${addedDays !== 1 ? 's' : ''} ago</span>`;
                         }
 
                         // High-risk caution badge (medical only)
@@ -3336,10 +3362,10 @@
                 stock[itemIndex].price = newPrice;
                 stock[itemIndex].quantity = newQuantity;
                 stock[itemIndex].isEditing = false;
-                if (expiryInput !== null) {
+                if (expiryInput != null) {
                     stock[itemIndex].expiryDate = expiryInput.value || '';
                 }
-                if (highRiskInput !== null) {
+                if (highRiskInput != null) {
                     stock[itemIndex].isHighRisk = highRiskInput.checked;
                 }
                 // Preserve barcode when editing
