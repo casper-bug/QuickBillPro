@@ -322,6 +322,9 @@
             transition: border-color 0.15s, background 0.15s;
         }
         .ob-mode-btn:hover { border-color: var(--accent-color); background: var(--hover-bg); }
+        .ob-mode-btn.active { border-color: #3b82f6; background: rgba(59,130,246,0.12); }
+        .ob-mode-btn.active .ob-label,
+        .ob-mode-btn.active span.text-xs.font-bold { color: #3b82f6 !important; }
         .ob-mode-btn .ob-icon {
             font-size: 2rem;
             line-height: 1;
@@ -767,18 +770,14 @@
 
         /* Autocomplete styles (Optimized) */
         .autocomplete-items {
-            position: absolute;
+            position: fixed;
             border: 1px solid var(--border-color);
-            border-top: none;
             z-index: 10000;
-            top: 100%;
-            left: 0;
-            right: 0;
             max-height: 200px;
             overflow-y: auto;
             background-color: var(--bg-secondary);
-            border-radius: 0 0 1rem 1rem;
-            box-shadow: 0 4px 6px var(--shadow);
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 24px var(--shadow-md);
             will-change: opacity;
             transform: translateZ(0);
         }
@@ -1477,10 +1476,19 @@
                     <h2 class="text-xl font-black" style="color:var(--text-primary);">Set up your business</h2>
                     <p class="text-xs mt-1" style="color:var(--text-secondary);">This appears on your bills. You can edit it any time in Settings.</p>
                 </div>
-                <input type="text" id="ob-company-name" placeholder="Business name" autocomplete="organization"
+                <input type="text" id="ob-company-name" placeholder="Business name *" autocomplete="organization"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <input type="text" id="ob-address" placeholder="Business address" autocomplete="street-address"
                     class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
                 <input type="tel" id="ob-phone" placeholder="Phone number (optional)" autocomplete="tel"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <input type="email" id="ob-business-email" placeholder="Business email (optional)" autocomplete="email"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <input type="text" id="ob-gst-number" placeholder="GST / Tax ID (optional)" autocomplete="off"
                     class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
                 <div>
@@ -1502,6 +1510,7 @@
                 </div>
                 <button onclick="obComplete()" class="w-full bg-black text-white py-4 rounded-2xl font-black text-base hover:opacity-90 transition-opacity" style="background:#111827;">Let's go →</button>
                 <button class="ob-skip-link" onclick="obComplete()">Skip — set up later</button>
+                <p class="text-xs text-center" style="color:var(--text-tertiary);">💡 All business details can be changed later in <strong>Settings</strong>.</p>
             </div>
         </div>
 
@@ -1735,9 +1744,15 @@
                             <label class="text-[10px] font-black uppercase px-2" style="color: var(--text-tertiary);">Customer Name</label>
                             <input type="text" id="buyerName" placeholder="Enter name..." class="w-full p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
                         </div>
-                        <div class="stock-deduction-container">
-                            <input type="checkbox" id="deduct-from-stock" class="h-4 w-4 text-black rounded focus:ring-black" checked>
-                            <label for="deduct-from-stock" class="text-sm font-medium" style="color: var(--text-secondary);">Deduct items from stock when saving bill</label>
+                        <div class="flex flex-col gap-3 justify-center">
+                            <div class="stock-deduction-container">
+                                <input type="checkbox" id="deduct-from-stock" class="h-4 w-4 text-black rounded focus:ring-black" checked>
+                                <label for="deduct-from-stock" class="text-sm font-medium" style="color: var(--text-secondary);">Deduct items from stock when saving bill</label>
+                            </div>
+                            <div class="stock-deduction-container">
+                                <input type="checkbox" id="apply-gst" class="h-4 w-4 text-black rounded focus:ring-black" onchange="calculateAndDisplayGrandTotal()">
+                                <label for="apply-gst" class="text-sm font-medium" style="color: var(--text-secondary);">Add GST to bill (<span id="gst-rate-label">0</span>%)</label>
+                            </div>
                         </div>
                     </div>
 
@@ -1746,7 +1761,7 @@
                             <label class="text-[10px] font-black uppercase" style="color: var(--text-tertiary);">Products & Items</label>
                         </div>
                         <div class="overflow-x-auto mb-4 mobile-table-container">
-                            <table id="products-table" class="min-w-full rounded-2xl overflow-hidden transition-colors" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+                            <table id="products-table" class="min-w-full rounded-2xl transition-colors" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
                                 <thead>
                                     <tr style="background-color: var(--bg-tertiary);">
                                         <th class="py-3 px-4 text-left text-xs sm:text-sm font-semibold uppercase" style="color: var(--text-secondary);">Product</th>
@@ -1761,13 +1776,23 @@
                                 </tbody>
                             </table>
                         </div>
-                        <button type="button" id="add-item-row-btn" class="w-full py-5 border-2 border-dashed rounded-3xl font-bold transition-all" style="border-color: var(--border-color); color: var(--text-tertiary);" onmouseover="this.style.backgroundColor=`var(--bg-tertiary)`; this.style.borderColor=`var(--accent-color)`; this.style.color=`var(--text-primary)`;" onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor=`var(--border-color)`; this.style.color=`var(--text-tertiary)`;">
-                            <i class="material-icons mr-2">add_circle_outline</i> Add Product
+                        <button type="button" id="add-item-row-btn" class="w-full py-5 border-2 border-dashed rounded-3xl font-bold transition-all flex items-center justify-center gap-2" style="border-color: var(--border-color); color: var(--text-tertiary);" onmouseover="this.style.backgroundColor=`var(--bg-tertiary)`; this.style.borderColor=`var(--accent-color)`; this.style.color=`var(--text-primary)`;" onmouseout="this.style.backgroundColor='transparent'; this.style.borderColor=`var(--border-color)`; this.style.color=`var(--text-tertiary)`;">
+                            <i class="material-icons" style="font-size:1.25rem;">add_circle_outline</i> Add Product
                         </button>
                     </div>
 
                     <div class="pt-10 flex flex-col sm:flex-row justify-between items-center gap-6" style="border-top: 1px solid var(--border-color);">
-                        <div class="text-center sm:text-left">
+                        <div class="text-left space-y-1">
+                            <div id="gst-breakdown" class="hidden space-y-1">
+                                <div class="flex justify-between gap-8">
+                                    <p class="text-[10px] font-black uppercase" style="color: var(--text-tertiary);">Subtotal</p>
+                                    <p class="text-sm font-bold">₹<span id="bill-subtotal">0.00</span></p>
+                                </div>
+                                <div class="flex justify-between gap-8">
+                                    <p class="text-[10px] font-black uppercase" style="color: var(--text-tertiary);">GST (<span id="gst-pct-label2">0</span>%)</p>
+                                    <p class="text-sm font-bold text-blue-600">+₹<span id="bill-gst-amount">0.00</span></p>
+                                </div>
+                            </div>
                             <p class="text-[10px] font-black uppercase" style="color: var(--text-tertiary);">Grand Total</p>
                             <p class="text-4xl font-black tracking-tighter">₹<span id="grand-total">0.00</span></p>
                         </div>
@@ -2269,7 +2294,8 @@
             email: '',
             gstNumber: '',
             defaultBillNotes: '',
-            industryMode: 'general'
+            industryMode: 'general',
+            gstRate: 0
         };
         
         let currentItems = [];
@@ -5423,10 +5449,16 @@
         // Called after Step 3 — go to install step if prompt is available, else finish
         function obComplete() {
             // Persist company details entered in onboarding into the global companyDetails
-            const name  = document.getElementById('ob-company-name')?.value.trim() || '';
-            const phone = document.getElementById('ob-phone')?.value.trim() || '';
-            if (name)  companyDetails.companyName = name;   // companyDetails is the app-global object
-            if (phone) companyDetails.phone       = phone;
+            const name    = document.getElementById('ob-company-name')?.value.trim() || '';
+            const phone   = document.getElementById('ob-phone')?.value.trim() || '';
+            const address = document.getElementById('ob-address')?.value.trim() || '';
+            const bizEmail = document.getElementById('ob-business-email')?.value.trim() || '';
+            const gstNum  = document.getElementById('ob-gst-number')?.value.trim() || '';
+            if (name)     companyDetails.companyName = name;
+            if (phone)    companyDetails.phone       = phone;
+            if (address)  companyDetails.address     = address;
+            if (bizEmail) companyDetails.email       = bizEmail;
+            if (gstNum)   companyDetails.gstNumber   = gstNum;
             companyDetails.industryMode = _obSelectedIndustry;
             saveDataToLocalStorage('companyDetails', companyDetails);
 
