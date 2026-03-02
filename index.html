@@ -287,6 +287,24 @@
         }
         #onboarding-overlay.hidden { display: none; }
 
+        #ob-dark-mode-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 10;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            background: var(--bg-secondary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
         .ob-card {
             width: 100%;
             max-width: 420px;
@@ -1391,6 +1409,9 @@
          ════════════════════════════════ -->
     <div id="onboarding-overlay" class="hidden">
 
+        <!-- Dark mode toggle button in top-right corner -->
+        <button onclick="toggleDarkMode()" id="ob-dark-mode-btn" aria-label="Toggle dark/light mode">🌙</button>
+
         <!-- ── Step 0: Welcome ── -->
         <div class="ob-step active" id="ob-step-0">
             <div class="ob-card" style="text-align:center; gap: 1.5rem;">
@@ -2342,6 +2363,7 @@
             const html = document.documentElement;
             const toggle = document.getElementById('dark-mode-toggle');
             const slider = document.getElementById('dark-mode-slider');
+            const obBtn = document.getElementById('ob-dark-mode-btn');
             
             if (darkMode) {
                 html.setAttribute('data-theme', 'dark');
@@ -2350,6 +2372,7 @@
                     slider.style.transform = 'translateX(32px)';
                     slider.style.backgroundColor = '#ffffff';
                 }
+                if (obBtn) obBtn.textContent = '☀️';
             } else {
                 html.removeAttribute('data-theme');
                 if (toggle) toggle.style.backgroundColor = '#cbd5e1';
@@ -2357,6 +2380,7 @@
                     slider.style.transform = 'translateX(0)';
                     slider.style.backgroundColor = '#ffffff';
                 }
+                if (obBtn) obBtn.textContent = '🌙';
             }
         }
         
@@ -2700,7 +2724,8 @@
                     item.name.substr(matchEnd) +
                     ` <span style="color: #6b7280; font-size: 0.875rem;">(₹${item.price.toFixed(2)})</span>`;
                 
-                suggestionDiv.addEventListener('click', () => {
+                suggestionDiv.addEventListener('mousedown', (e) => {
+                    e.preventDefault(); // Prevent input blur before selection
                     if (isExpiredMedicine(item)) { closeAllLists(); return; }
                     input.value = item.name;
                     currentItems[index].product = item.name;
@@ -5258,6 +5283,7 @@
                         return;
                     }
                 }
+                localStorage.removeItem('quickbill-setup-complete');
                 showToast("All data cleared successfully. Reloading...");
                 setTimeout(() => {
                     location.reload();
