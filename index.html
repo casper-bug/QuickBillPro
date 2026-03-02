@@ -264,6 +264,75 @@
             will-change: contents;
         }
 
+        /* Industry mode button styles */
+        .industry-mode-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 2px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            gap: 0.25rem;
+        }
+        .industry-mode-btn:hover {
+            border-color: var(--accent-color);
+            background: var(--hover-bg);
+        }
+        .industry-mode-btn.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.12);
+            color: #3b82f6;
+        }
+        .industry-mode-btn.active-medical {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.10);
+            color: #ef4444;
+        }
+        .industry-mode-btn.active-grocery {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.10);
+            color: #10b981;
+        }
+
+        /* Caution badge for high-risk medicines */
+        .caution-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            background: rgba(239, 68, 68, 0.12);
+            color: #dc2626;
+            border-radius: 0.4rem;
+            padding: 0.1rem 0.4rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-left: 0.4rem;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* Expiry indicator badges */
+        .expiry-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            border-radius: 0.4rem;
+            padding: 0.1rem 0.4rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            margin-top: 0.15rem;
+            white-space: nowrap;
+        }
+        .expiry-badge.ok { background: rgba(16, 185, 129, 0.12); color: #059669; }
+        .expiry-badge.warn { background: rgba(245, 158, 11, 0.14); color: #d97706; }
+        .expiry-badge.expired { background: rgba(239, 68, 68, 0.12); color: #dc2626; }
+        .expiry-badge.grocery { background: rgba(99, 102, 241, 0.12); color: #4f46e5; }
+
         /* Dashboard specific styles */
         .dashboard-grid {
             display: grid;
@@ -948,10 +1017,24 @@
             
             /* Chart containers */
             .chart-container {
-                padding: 1rem !important;
-                height: 250px;
+                padding: 0.875rem !important;
+                height: auto !important;
+                min-height: 220px;
                 overflow-x: auto;
-                overflow-y: auto;
+                overflow-y: hidden;
+            }
+            
+            .simple-bar-chart {
+                height: 150px !important;
+                gap: 0.5rem !important;
+            }
+            
+            .bar-container {
+                min-width: 36px !important;
+            }
+            
+            .simple-line-chart {
+                height: 150px !important;
             }
             
             .chart-title {
@@ -1362,11 +1445,24 @@
         <div id="page-stock" class="page-content space-y-8">
             <div class="p-8 lg:p-12 rounded-[3rem] shadow-sm transition-colors" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
                 <h2 class="text-2xl font-black mb-8">Stock Intake</h2>
-                <form id="stock-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <input type="text" id="stockProductName" placeholder="Item Name / Code" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
-                    <input type="number" id="stockProductPrice" placeholder="Unit Price" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
-                    <input type="number" id="stockProductQuantity" placeholder="Initial Stock" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
-                    <button type="submit" class="bg-black text-white p-5 rounded-2xl font-black tracking-tight">Register Item</button>
+                <form id="stock-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input type="text" id="stockProductName" placeholder="Item Name / Code" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
+                        <input type="number" id="stockProductPrice" placeholder="Unit Price" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
+                        <input type="number" id="stockProductQuantity" placeholder="Initial Stock" class="p-5 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required>
+                        <button type="submit" class="bg-black text-white p-5 rounded-2xl font-black tracking-tight">Register Item</button>
+                    </div>
+                    <!-- Industry-specific fields (shown based on industry mode) -->
+                    <div id="stock-industry-fields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black uppercase px-1" style="color: var(--text-tertiary);">Expiry Date</label>
+                            <input type="date" id="stockExpiryDate" class="w-full p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all" style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);">
+                        </div>
+                        <div id="stock-high-risk-field" class="hidden flex items-center gap-3 p-4 rounded-2xl" style="background-color: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.3);">
+                            <input type="checkbox" id="stockHighRisk" class="h-5 w-5 rounded focus:ring-red-500" style="accent-color: #ef4444;">
+                            <label for="stockHighRisk" class="font-bold text-sm" style="color: #dc2626;">⚠️ High Risk Medicine — show caution on bill</label>
+                        </div>
+                    </div>
                 </form>
             </div>
 
@@ -1449,6 +1545,27 @@
                             <div id="dark-mode-slider" class="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform duration-300"></div>
                         </button>
                     </div>
+                </div>
+
+                <!-- Industry Mode Card -->
+                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                    <h3 class="text-xl font-black">Industry Mode</h3>
+                    <p class="text-sm" style="color: var(--text-secondary);">Choose your sector to unlock specialized features like expiry tracking, caution flags, and sector-specific indicators.</p>
+                    <div class="grid grid-cols-3 gap-3">
+                        <button onclick="setIndustryMode('general')" id="mode-btn-general" class="industry-mode-btn">
+                            <i class="material-icons" style="font-size:1.75rem;">store</i>
+                            <span class="text-xs font-bold">General</span>
+                        </button>
+                        <button onclick="setIndustryMode('medical')" id="mode-btn-medical" class="industry-mode-btn">
+                            <i class="material-icons" style="font-size:1.75rem;">local_pharmacy</i>
+                            <span class="text-xs font-bold">Medical</span>
+                        </button>
+                        <button onclick="setIndustryMode('grocery')" id="mode-btn-grocery" class="industry-mode-btn">
+                            <i class="material-icons" style="font-size:1.75rem;">local_grocery_store</i>
+                            <span class="text-xs font-bold">Grocery</span>
+                        </button>
+                    </div>
+                    <div id="industry-mode-description" class="p-3 rounded-xl text-xs" style="background-color: var(--bg-tertiary); color: var(--text-secondary);"></div>
                 </div>
                 
                 <div class="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm space-y-8" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
@@ -1798,7 +1915,8 @@
             phone: '',
             email: '',
             gstNumber: '',
-            defaultBillNotes: ''
+            defaultBillNotes: '',
+            industryMode: 'general'
         };
         
         let currentItems = [];
@@ -1852,6 +1970,59 @@
             const saved = localStorage.getItem('darkMode');
             darkMode = saved === 'true';
             applyDarkMode();
+        }
+
+        // --- Industry Mode Functions ---
+        function getIndustryMode() {
+            return companyDetails.industryMode || 'general';
+        }
+
+        function setIndustryMode(mode) {
+            companyDetails.industryMode = mode;
+            saveDataToLocalStorage('companyDetails', companyDetails);
+            updateIndustryModeUI(mode);
+            updateStockFormVisibility();
+            const labels = { general: 'General', medical: 'Medical', grocery: 'Grocery' };
+            showToast(`✅ Industry mode: ${labels[mode] || mode}`);
+        }
+
+        function updateIndustryModeUI(mode) {
+            const btns = { general: 'mode-btn-general', medical: 'mode-btn-medical', grocery: 'mode-btn-grocery' };
+            Object.entries(btns).forEach(([key, id]) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.classList.remove('active', 'active-medical', 'active-grocery');
+                if (key === mode) {
+                    if (mode === 'medical') btn.classList.add('active-medical');
+                    else if (mode === 'grocery') btn.classList.add('active-grocery');
+                    else btn.classList.add('active');
+                }
+            });
+            const desc = document.getElementById('industry-mode-description');
+            if (desc) {
+                const descriptions = {
+                    general: '🏪 <strong>General</strong> — Standard billing for any business.',
+                    medical: '💊 <strong>Medical</strong> — Expiry date tracking in inventory, high-risk medicine caution flags in stock and bills.',
+                    grocery: '🛒 <strong>Grocery</strong> — Expiry date tracking and days-since-added indicator for freshness monitoring.'
+                };
+                desc.innerHTML = descriptions[mode] || descriptions.general;
+            }
+        }
+
+        function updateStockFormVisibility() {
+            const mode = getIndustryMode();
+            const industryFields = document.getElementById('stock-industry-fields');
+            const highRiskField = document.getElementById('stock-high-risk-field');
+            if (mode === 'medical' || mode === 'grocery') {
+                industryFields?.classList.remove('hidden');
+            } else {
+                industryFields?.classList.add('hidden');
+            }
+            if (mode === 'medical') {
+                highRiskField?.classList.remove('hidden');
+            } else {
+                highRiskField?.classList.add('hidden');
+            }
         }
 
         // --- Helper Functions (Optimized) ---
@@ -2630,8 +2801,16 @@
         function updateProductsTable() {
             const container = document.getElementById('bill-items-container');
             container.innerHTML = '';
+            const mode = getIndustryMode();
             
             currentItems.forEach((item, index) => {
+                // Check if this product is a high-risk medicine
+                const stockMatch = stock.find(s => s.name.toLowerCase() === item.product.trim().toLowerCase());
+                const isMedicalRisk = mode === 'medical' && stockMatch && stockMatch.isHighRisk;
+                const cautionHtml = isMedicalRisk
+                    ? `<span class="caution-badge"><i class="material-icons" style="font-size:0.8rem;">warning</i>CAUTION</span>`
+                    : '';
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td class="py-3 px-4">
@@ -2639,6 +2818,7 @@
                             <input type="text" data-field="product" data-index="${index}" value="${item.product}"
                                 class="block w-full px-4 py-3 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                 style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" placeholder="Product Name" required />
+                            ${cautionHtml}
                         </div>
                     </td>
                     <td class="py-3 px-4">
@@ -2923,6 +3103,8 @@
 
         // --- Stock Management ---
         function renderStock() {
+            updateStockFormVisibility();
+            const mode = getIndustryMode();
             const stockTableBody = document.getElementById('stock-table-body');
             stockTableBody.innerHTML = '';
             
@@ -2942,10 +3124,25 @@
                     row.dataset.stockId = item.id;
                     
                     if (item.isEditing) {
+                        const showExtraFields = mode === 'medical' || mode === 'grocery';
+                        const showHighRisk = mode === 'medical';
                         row.innerHTML = `
                             <td class="p-8">
                                 <input type="text" data-field="name" value="${item.name}"
                                     class="block w-full px-4 py-3 bg-gray-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-black transition-all" />
+                                ${showExtraFields ? `
+                                    <div class="mt-2 space-y-1">
+                                        <label class="text-[10px] font-black uppercase" style="color: var(--text-tertiary);">Expiry Date</label>
+                                        <input type="date" data-field="expiryDate" value="${item.expiryDate || ''}"
+                                            class="block w-full px-4 py-2 bg-gray-50 rounded-2xl border-none outline-none focus:ring-2 focus:ring-black transition-all" />
+                                    </div>
+                                ` : ''}
+                                ${showHighRisk ? `
+                                    <div class="flex items-center gap-2 mt-2 p-2 rounded-xl" style="background-color:rgba(239,68,68,0.07);">
+                                        <input type="checkbox" data-field="isHighRisk" ${item.isHighRisk ? 'checked' : ''} class="h-4 w-4" style="accent-color:#ef4444;">
+                                        <label class="text-xs font-bold" style="color:#dc2626;">⚠️ High Risk Medicine</label>
+                                    </div>
+                                ` : ''}
                             </td>
                             <td class="p-8">
                                 <input type="number" data-field="price" value="${item.price}" step="0.01" min="0"
@@ -2964,8 +3161,36 @@
                         `;
                     } else {
                         const isLowStock = item.quantity <= 5;
+
+                        // Build expiry/freshness badge
+                        let expiryBadgeHtml = '';
+                        if ((mode === 'medical' || mode === 'grocery') && item.expiryDate) {
+                            const expDate = new Date(item.expiryDate);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            const diffDays = Math.ceil((expDate - today) / 86400000);
+                            if (diffDays < 0) {
+                                expiryBadgeHtml = `<span class="expiry-badge expired">⛔ Expired ${Math.abs(diffDays)}d ago</span>`;
+                            } else if (diffDays <= 30) {
+                                expiryBadgeHtml = `<span class="expiry-badge warn">⚠️ Exp in ${diffDays}d</span>`;
+                            } else {
+                                expiryBadgeHtml = `<span class="expiry-badge ok">✅ Exp ${expDate.toLocaleDateString()}</span>`;
+                            }
+                        } else if (mode === 'grocery' && item.dateAdded) {
+                            const addedDays = Math.floor((Date.now() - new Date(item.dateAdded)) / 86400000);
+                            expiryBadgeHtml = `<span class="expiry-badge grocery">🗓 Added ${addedDays}d ago</span>`;
+                        }
+
+                        // High-risk caution badge (medical only)
+                        const cautionBadgeHtml = (mode === 'medical' && item.isHighRisk)
+                            ? `<span class="caution-badge"><i class="material-icons" style="font-size:0.85rem;">warning</i>HIGH RISK</span>`
+                            : '';
+
                         row.innerHTML = `
-                            <td class="p-8 font-black text-sm">${item.name}</td>
+                            <td class="p-8 font-black text-sm">
+                                <div>${item.name}${cautionBadgeHtml}</div>
+                                ${expiryBadgeHtml ? `<div>${expiryBadgeHtml}</div>` : ''}
+                            </td>
                             <td class="p-8 font-bold text-gray-500">₹${item.price.toFixed(2)}</td>
                             <td class="p-8">
                                 <span class="px-4 py-2 rounded-xl text-sm font-bold ${isLowStock ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}">
@@ -3045,7 +3270,10 @@
                 name: productName,
                 price: productPrice,
                 quantity: productQuantity,
-                isEditing: false
+                isEditing: false,
+                dateAdded: new Date().toISOString(),
+                expiryDate: document.getElementById('stockExpiryDate')?.value || '',
+                isHighRisk: document.getElementById('stockHighRisk')?.checked || false
             };
             
             stock.push(newStockItem);
@@ -3056,6 +3284,10 @@
             document.getElementById('stockProductName').value = '';
             document.getElementById('stockProductPrice').value = '';
             document.getElementById('stockProductQuantity').value = '';
+            const expiryInput = document.getElementById('stockExpiryDate');
+            if (expiryInput) expiryInput.value = '';
+            const highRiskInput = document.getElementById('stockHighRisk');
+            if (highRiskInput) highRiskInput.checked = false;
             renderStock();
         });
 
@@ -3074,6 +3306,8 @@
                 const nameInput = row.querySelector('input[data-field="name"]');
                 const priceInput = row.querySelector('input[data-field="price"]');
                 const quantityInput = row.querySelector('input[data-field="quantity"]');
+                const expiryInput = row.querySelector('input[data-field="expiryDate"]');
+                const highRiskInput = row.querySelector('input[data-field="isHighRisk"]');
 
                 const newName = nameInput.value.trim();
                 const newPrice = parseFloat(priceInput.value);
@@ -3102,6 +3336,12 @@
                 stock[itemIndex].price = newPrice;
                 stock[itemIndex].quantity = newQuantity;
                 stock[itemIndex].isEditing = false;
+                if (expiryInput !== null) {
+                    stock[itemIndex].expiryDate = expiryInput.value || '';
+                }
+                if (highRiskInput !== null) {
+                    stock[itemIndex].isHighRisk = highRiskInput.checked;
+                }
                 // Preserve barcode when editing
                 if (!stock[itemIndex].barcode) {
                     stock[itemIndex].barcode = generateBarcodeNumber();
@@ -4276,6 +4516,9 @@
             document.getElementById('gstNumber').value = companyDetails.gstNumber || '';
             document.getElementById('defaultBillNotes').value = companyDetails.defaultBillNotes || '';
             
+            // Update industry mode UI
+            updateIndustryModeUI(getIndustryMode());
+            
             // Update auth UI
             if (window.firebaseUser) {
                 updateAuthUI(window.firebaseUser);
@@ -4296,7 +4539,8 @@
                 phone: document.getElementById('phone').value.trim(),
                 email: document.getElementById('email').value.trim(),
                 gstNumber: document.getElementById('gstNumber').value.trim(),
-                defaultBillNotes: document.getElementById('defaultBillNotes').value.trim()
+                defaultBillNotes: document.getElementById('defaultBillNotes').value.trim(),
+                industryMode: companyDetails.industryMode || 'general'
             };
             
             saveDataToLocalStorage('companyDetails', companyDetails);
@@ -4372,6 +4616,7 @@
                         companyDetails = {
                             gstNumber: '',
                             defaultBillNotes: '',
+                            industryMode: 'general',
                             ...importedData.companyDetails
                         };
 
@@ -4525,6 +4770,8 @@
 
                     // Load data from localStorage
                     companyDetails = { ...companyDetails, ...loadDataFromLocalStorage('companyDetails', {}) };
+                    // Ensure industryMode is preserved
+                    if (!companyDetails.industryMode) companyDetails.industryMode = 'general';
 
                     const storedOrders = loadDataFromLocalStorage('orders', []);
                     const processedOrders = storedOrders.map(order => ({
