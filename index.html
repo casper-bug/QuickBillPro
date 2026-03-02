@@ -565,7 +565,7 @@
             margin-bottom: 1.5rem;
             height: 300px;
             overflow-x: auto;
-            overflow-y: auto;
+            overflow-y: visible;
             transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
         
@@ -742,9 +742,9 @@
             align-items: flex-end;
             height: 200px;
             gap: 1rem;
-            padding: 1rem 0;
+            padding: 1rem 0 2rem;
             overflow-x: auto;
-            overflow-y: hidden;
+            overflow-y: visible;
             min-width: 100%;
         }
         
@@ -783,10 +783,10 @@
         
         .simple-line-chart {
             position: relative;
-            height: 200px;
+            height: 220px;
             width: 100%;
             overflow-x: auto;
-            overflow-y: hidden;
+            overflow-y: visible;
         }
         
         .chart-grid-line {
@@ -1179,12 +1179,13 @@
                 height: auto !important;
                 min-height: 260px;
                 overflow-x: auto;
-                overflow-y: auto;
+                overflow-y: visible;
             }
             
             .simple-bar-chart {
                 height: 200px !important;
                 gap: 0.5rem !important;
+                overflow-y: visible !important;
             }
             
             .bar-container {
@@ -1192,7 +1193,8 @@
             }
             
             .simple-line-chart {
-                height: 210px !important;
+                height: 220px !important;
+                overflow-y: visible !important;
             }
             
             .chart-title {
@@ -1750,7 +1752,6 @@
                     <button class="date-filter-button" data-range="30">30D</button>
                     <button class="date-filter-button" data-range="90">90D</button>
                     <button class="date-filter-button" data-range="365">1Y</button>
-                    <button class="date-filter-button" data-range="all">All</button>
                 </div>
             </div>
 
@@ -2917,11 +2918,7 @@
             const endDate = new Date();
             const startDate = new Date();
             
-            if (daysRange === 'all') {
-                startDate.setTime(0);
-            } else {
-                startDate.setDate(endDate.getDate() - daysRange);
-            }
+            startDate.setDate(endDate.getDate() - daysRange);
             
             const previousEndDate = new Date(startDate);
             const previousStartDate = new Date(startDate);
@@ -3104,8 +3101,8 @@
             const calculatedWidth = Math.max(minWidth, 40 + (dataPoints.length * pointSpacing) + 40);
             
             svg.setAttribute("width", calculatedWidth);
-            svg.setAttribute("height", "200");
-            svg.setAttribute("viewBox", `0 0 ${calculatedWidth} 200`);
+            svg.setAttribute("height", "220");
+            svg.setAttribute("viewBox", `0 0 ${calculatedWidth} 220`);
             svg.style.minWidth = `${calculatedWidth}px`;
             
             const counts = dataPoints.map(dp => dp.count);
@@ -3164,7 +3161,7 @@
                 
                 const text = document.createElementNS(svgNS, "text");
                 text.setAttribute("x", x);
-                text.setAttribute("y", "195");
+                text.setAttribute("y", "212");
                 text.setAttribute("text-anchor", "middle");
                 text.setAttribute("font-size", "9");
                 text.setAttribute("fill", "#6b7280");
@@ -5409,7 +5406,7 @@
         // --- Date Filter Event Listeners ---
         document.querySelectorAll('.date-filter-button').forEach(button => {
             button.addEventListener('click', function() {
-                dashboardRange = this.dataset.range === 'all' ? 'all' : parseInt(this.dataset.range);
+                dashboardRange = parseInt(this.dataset.range);
                 updateDashboardData(dashboardRange);
             });
         });
