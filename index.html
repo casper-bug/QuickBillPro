@@ -263,6 +263,88 @@
             will-change: contents;
         }
 
+        /* ── Onboarding overlay ── */
+        #onboarding-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            background: var(--bg-primary);
+            padding: 1.5rem;
+        }
+        #onboarding-overlay.hidden { display: none; }
+
+        .ob-card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .ob-step { display: none; width: 100%; max-width: 420px; flex-direction: column; align-items: center; gap: 1.25rem; }
+        .ob-step.active { display: flex; }
+
+        @keyframes obIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .ob-step.active { animation: obIn 0.25s ease forwards; }
+
+        .ob-mode-btn {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.1rem 1.25rem;
+            border: 2px solid var(--border-color);
+            border-radius: 1rem;
+            background: var(--bg-tertiary);
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .ob-mode-btn:hover { border-color: var(--accent-color); background: var(--hover-bg); }
+        .ob-mode-btn .ob-icon {
+            font-size: 2rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .ob-mode-btn .ob-label { font-weight: 800; font-size: 0.95rem; color: var(--text-primary); }
+        .ob-mode-btn .ob-desc  { font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.15rem; }
+
+        .ob-skip-link {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            background: none;
+            border: none;
+            padding: 0;
+        }
+        .ob-skip-link:hover { color: var(--text-secondary); }
+
+        /* ── Connection-mode badge in settings ── */
+        .conn-mode-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.4rem;
+        }
+        .conn-mode-badge.online  { background: rgba(16,185,129,0.12); color: #059669; }
+        .conn-mode-badge.offline { background: rgba(107,114,128,0.12); color: #4b5563; }
+
         /* Industry mode button styles */
         .industry-mode-btn {
             display: flex;
@@ -1229,6 +1311,173 @@
         </div>
     </div>
 
+    <!-- ════════════════════════════════
+         Onboarding Overlay (first-time only)
+         ════════════════════════════════ -->
+    <div id="onboarding-overlay" class="hidden">
+
+        <!-- ── Step 0: Welcome ── -->
+        <div class="ob-step active" id="ob-step-0">
+            <div class="ob-card" style="text-align:center; gap: 1.5rem;">
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-lg" style="background: #000;">
+                    <i class="material-icons text-white" style="font-size:2rem;">receipt_long</i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-tight" style="color:var(--text-primary);">Welcome to<br>QUICKBILL<span style="color:#3b82f6;">PRO</span></h1>
+                    <p class="text-sm mt-2" style="color:var(--text-secondary);">Fast, modern billing for your business. Let's get you set up in under a minute.</p>
+                </div>
+                <button onclick="obGoStep(1)" class="w-full bg-black text-white py-4 rounded-2xl font-black text-base hover:opacity-90 transition-opacity" style="background:#111827;">Get Started →</button>
+            </div>
+        </div>
+
+        <!-- ── Step 1: Online vs Offline ── -->
+        <div class="ob-step" id="ob-step-1">
+            <div class="ob-card" style="gap:1rem;">
+                <div>
+                    <h2 class="text-xl font-black" style="color:var(--text-primary);">How do you want to use the app?</h2>
+                    <p class="text-xs mt-1" style="color:var(--text-secondary);">This affects how your data is stored and synced.</p>
+                </div>
+                <button class="ob-mode-btn" onclick="obChooseMode('online')">
+                    <span class="ob-icon">☁️</span>
+                    <span>
+                        <div class="ob-label">Online Mode</div>
+                        <div class="ob-desc">Your data is backed up to the cloud and stays in sync across all your devices. Requires a free account.</div>
+                    </span>
+                </button>
+                <button class="ob-mode-btn" onclick="obChooseMode('offline')">
+                    <span class="ob-icon">📱</span>
+                    <span>
+                        <div class="ob-label">Offline Mode</div>
+                        <div class="ob-desc">Everything stays on this device only. No account needed. No internet required. You can always switch later in Settings.</div>
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ── Step 2: Sign in / Sign up (online path) ── -->
+        <div class="ob-step" id="ob-step-2">
+            <div class="ob-card" style="gap:1rem;">
+                <div>
+                    <h2 class="text-xl font-black" style="color:var(--text-primary);">Create your account</h2>
+                    <p class="text-xs mt-1" style="color:var(--text-secondary);">Sign in or sign up to enable cloud backup and multi-device sync.</p>
+                </div>
+                <!-- Google -->
+                <button onclick="obHandleGoogle()" class="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm border-2 transition-colors hover:bg-gray-50" style="border-color:var(--border-color); background:var(--bg-secondary); color:var(--text-primary);">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Continue with Google
+                </button>
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 h-px" style="background:var(--border-color);"></div>
+                    <span class="text-xs" style="color:var(--text-tertiary);">or</span>
+                    <div class="flex-1 h-px" style="background:var(--border-color);"></div>
+                </div>
+                <!-- Email / password — autocomplete enabled for password managers -->
+                <form id="ob-auth-form" onsubmit="return false;" autocomplete="on" class="space-y-3">
+                    <input type="email" id="ob-email" name="email" autocomplete="email" placeholder="Email address"
+                        class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                        style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                    <input type="password" id="ob-password" name="password" autocomplete="current-password" placeholder="Password"
+                        class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                        style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                    <p id="ob-auth-error" class="text-xs text-red-500 hidden"></p>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="obHandleSignIn()" class="flex-1 bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
+                        <button type="button" onclick="obHandleSignUp()" class="flex-1 py-3 rounded-2xl font-bold text-sm transition-colors" style="background:var(--bg-tertiary); color:var(--text-primary);">Sign Up</button>
+                    </div>
+                </form>
+                <button class="ob-skip-link" onclick="obGoStep(3)">Skip for now — I'll sign in later</button>
+            </div>
+        </div>
+
+        <!-- ── Step 3: Company details + industry ── -->
+        <div class="ob-step" id="ob-step-3">
+            <div class="ob-card" style="gap:1rem;">
+                <div>
+                    <h2 class="text-xl font-black" style="color:var(--text-primary);">Set up your business</h2>
+                    <p class="text-xs mt-1" style="color:var(--text-secondary);">This appears on your bills. You can edit it any time in Settings.</p>
+                </div>
+                <input type="text" id="ob-company-name" placeholder="Business name" autocomplete="organization"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <input type="tel" id="ob-phone" placeholder="Phone number (optional)" autocomplete="tel"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <div>
+                    <p class="text-xs font-bold mb-2" style="color:var(--text-secondary);">Industry (optional)</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="obSetIndustry('general')" id="ob-ind-general" class="industry-mode-btn active">
+                            <i class="material-icons" style="font-size:1.5rem;">store</i>
+                            <span class="text-xs font-bold">General</span>
+                        </button>
+                        <button onclick="obSetIndustry('medical')" id="ob-ind-medical" class="industry-mode-btn">
+                            <i class="material-icons" style="font-size:1.5rem;">local_pharmacy</i>
+                            <span class="text-xs font-bold">Medical</span>
+                        </button>
+                        <button onclick="obSetIndustry('grocery')" id="ob-ind-grocery" class="industry-mode-btn">
+                            <i class="material-icons" style="font-size:1.5rem;">local_grocery_store</i>
+                            <span class="text-xs font-bold">Grocery</span>
+                        </button>
+                    </div>
+                </div>
+                <button onclick="obComplete()" class="w-full bg-black text-white py-4 rounded-2xl font-black text-base hover:opacity-90 transition-opacity" style="background:#111827;">Let's go →</button>
+                <button class="ob-skip-link" onclick="obComplete()">Skip — set up later</button>
+            </div>
+        </div>
+
+        <!-- ── Step 4: Install App ── -->
+        <div class="ob-step" id="ob-step-4">
+            <div class="ob-card" style="text-align:center; gap:1.5rem;">
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-md" style="background:#3b82f6;">
+                    <i class="material-icons text-white" style="font-size:2rem;">install_mobile</i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-black" style="color:var(--text-primary);">Install the App</h2>
+                    <p class="text-sm mt-2" style="color:var(--text-secondary);">Add QuickBill Pro to your home screen for fast, full-screen access — even offline.</p>
+                </div>
+                <button id="ob-install-btn" onclick="obTriggerInstall()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-base hover:bg-blue-700 transition-colors">
+                    Add to Home Screen
+                </button>
+                <button class="ob-skip-link" onclick="obFinish()">Maybe later</button>
+            </div>
+        </div>
+
+    </div><!-- /#onboarding-overlay -->
+
+    <!-- Welcome-back modal (returning online user whose session expired) -->
+    <div id="welcome-back-overlay" class="hidden" style="position:fixed;inset:0;z-index:2500;display:none;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;background:var(--bg-primary);">
+        <div class="ob-card" style="gap:1rem;">
+            <div>
+                <h2 class="text-xl font-black" style="color:var(--text-primary);">Welcome back 👋</h2>
+                <p class="text-xs mt-1" style="color:var(--text-secondary);">Sign in to load your data from the cloud.</p>
+            </div>
+            <button onclick="wbHandleGoogle()" class="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-sm border-2 transition-colors hover:bg-gray-50" style="border-color:var(--border-color); background:var(--bg-secondary); color:var(--text-primary);">
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Sign in with Google
+            </button>
+            <form onsubmit="return false;" autocomplete="on" class="space-y-3">
+                <input type="email" id="wb-email" name="email" autocomplete="email" placeholder="Email"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <input type="password" id="wb-password" name="password" autocomplete="current-password" placeholder="Password"
+                    class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                <p id="wb-auth-error" class="text-xs text-red-500 hidden"></p>
+                <button type="button" onclick="wbHandleSignIn()" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
+            </form>
+            <button class="ob-skip-link" onclick="wbContinueOffline()">Continue with local data instead</button>
+        </div>
+    </div>
+
     <!-- Custom Confirmation Modal -->
     <div id="confirmation-modal" class="modal-overlay hidden">
         <div class="modal-content">
@@ -1558,7 +1807,24 @@
                     </div>
                 </div>
 
-                <!-- Industry Mode Card -->
+                <!-- Connection Mode Card -->
+                <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
+                    <h3 class="text-xl font-black">Connection Mode</h3>
+                    <p class="text-sm" style="color: var(--text-secondary);">Controls whether your data syncs to the cloud.</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="setConnectionMode('online')" id="conn-btn-online" class="ob-mode-btn flex-col items-center justify-center gap-1 py-3">
+                            <span style="font-size:1.6rem;">☁️</span>
+                            <span class="text-xs font-bold" style="color:var(--text-primary);">Online</span>
+                            <span class="text-[10px]" style="color:var(--text-tertiary);">Sync across devices</span>
+                        </button>
+                        <button onclick="setConnectionMode('offline')" id="conn-btn-offline" class="ob-mode-btn flex-col items-center justify-center gap-1 py-3">
+                            <span style="font-size:1.6rem;">📱</span>
+                            <span class="text-xs font-bold" style="color:var(--text-primary);">Offline</span>
+                            <span class="text-[10px]" style="color:var(--text-tertiary);">This device only</span>
+                        </button>
+                    </div>
+                    <div id="conn-mode-description" class="p-3 rounded-xl text-xs" style="background-color: var(--bg-tertiary); color: var(--text-secondary);"></div>
+                </div>
                 <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4" style="background-color: var(--bg-secondary); border-color: var(--border-color);">
                     <h3 class="text-xl font-black">Industry Mode</h3>
                     <p class="text-sm" style="color: var(--text-secondary);">Choose your sector to unlock specialized features like expiry tracking, caution flags, and sector-specific indicators.</p>
@@ -2165,8 +2431,9 @@
                 }
 
                 localStorage.setItem(lsKey, JSON.stringify(dataToStore));
-                // Trigger auto-sync to Firestore on every change
-                if (typeof window.scheduleAutoSync === 'function') {
+                // Trigger auto-sync only for online mode
+                if (typeof window.scheduleAutoSync === 'function' &&
+                    localStorage.getItem('quickbill-connection-mode') !== 'offline') {
                     window.scheduleAutoSync();
                 }
             } catch (error) {
@@ -4544,8 +4811,9 @@
             
             // Update industry mode UI
             updateIndustryModeUI(getIndustryMode());
-            
-            // Update auth UI
+
+            // Update connection mode UI
+            updateConnectionModeUI(localStorage.getItem('quickbill-connection-mode') || 'online');
             if (window.firebaseUser) {
                 updateAuthUI(window.firebaseUser);
             }
@@ -4841,9 +5109,23 @@
                             loadingOverlay.style.opacity = '0';
                             setTimeout(() => {
                                 loadingOverlay.classList.add('hidden');
-                                console.log('Rendering dashboard...');
-                                renderPage('dashboard');
-                                console.log('App loaded successfully!');
+
+                                const isSetupComplete = localStorage.getItem('quickbill-setup-complete');
+                                const connMode = localStorage.getItem('quickbill-connection-mode') || 'online';
+                                const sessionExpired = window.firebaseUser && window.firebaseUser.isAnonymous;
+
+                                if (!isSetupComplete) {
+                                    // First-time user → onboarding
+                                    showOnboarding();
+                                } else if (connMode === 'online' && sessionExpired) {
+                                    // Returning online user whose Firebase session lapsed → welcome-back
+                                    const wb = document.getElementById('welcome-back-overlay');
+                                    if (wb) { wb.style.display = 'flex'; }
+                                } else {
+                                    console.log('Rendering dashboard...');
+                                    renderPage('dashboard');
+                                    console.log('App loaded successfully!');
+                                }
                             }, 250);
                         } else {
                             console.error('Loading overlay element not found!');
@@ -4892,6 +5174,233 @@
 
         // Search functionality
         document.getElementById('order-search-input').addEventListener('input', renderAllOrders);
+
+        // ═══════════════════════════════════════════════════════════
+        //  ONBOARDING
+        // ═══════════════════════════════════════════════════════════
+
+        // Capture install prompt as early as possible
+        window._deferredInstallPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            window._deferredInstallPrompt = e;
+        });
+
+        let _obSelectedIndustry = 'general';
+
+        function showOnboarding() {
+            const overlay = document.getElementById('onboarding-overlay');
+            if (overlay) overlay.classList.remove('hidden');
+        }
+
+        function obGoStep(n) {
+            document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(`ob-step-${n}`);
+            if (target) target.classList.add('active');
+        }
+
+        function obChooseMode(mode) {
+            localStorage.setItem('quickbill-connection-mode', mode);
+            if (mode === 'online') {
+                obGoStep(2);
+            } else {
+                obGoStep(3);
+            }
+        }
+
+        async function obHandleGoogle() {
+            if (!window.firebaseSignInWithGoogle) { obGoStep(3); return; }
+            const err = document.getElementById('ob-auth-error');
+            err.classList.add('hidden');
+            const result = await window.firebaseSignInWithGoogle();
+            if (result.success) {
+                obGoStep(3);
+            } else {
+                err.textContent = result.error.replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '');
+                err.classList.remove('hidden');
+            }
+        }
+
+        async function obHandleSignIn() {
+            const email    = document.getElementById('ob-email').value.trim();
+            const password = document.getElementById('ob-password').value;
+            const err      = document.getElementById('ob-auth-error');
+            err.classList.add('hidden');
+            if (!email || !password) {
+                err.textContent = 'Please enter your email and password.';
+                err.classList.remove('hidden');
+                return;
+            }
+            if (!window.firebaseSignInWithEmail) { obGoStep(3); return; }
+            const result = await window.firebaseSignInWithEmail(email, password);
+            if (result.success) {
+                obGoStep(3);
+            } else {
+                err.textContent = result.error.replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '');
+                err.classList.remove('hidden');
+            }
+        }
+
+        async function obHandleSignUp() {
+            const email    = document.getElementById('ob-email').value.trim();
+            const password = document.getElementById('ob-password').value;
+            const err      = document.getElementById('ob-auth-error');
+            err.classList.add('hidden');
+            if (!email || !password) {
+                err.textContent = 'Please enter your email and password.';
+                err.classList.remove('hidden');
+                return;
+            }
+            if (password.length < 6) {
+                err.textContent = 'Password must be at least 6 characters.';
+                err.classList.remove('hidden');
+                return;
+            }
+            if (!window.firebaseSignUpWithEmail) { obGoStep(3); return; }
+            const result = await window.firebaseSignUpWithEmail(email, password);
+            if (result.success) {
+                obGoStep(3);
+            } else {
+                err.textContent = result.error.replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '');
+                err.classList.remove('hidden');
+            }
+        }
+
+        function obSetIndustry(mode) {
+            _obSelectedIndustry = mode;
+            ['general', 'medical', 'grocery'].forEach(k => {
+                const btn = document.getElementById(`ob-ind-${k}`);
+                if (btn) btn.classList.remove('active', 'active-medical', 'active-grocery');
+            });
+            const chosen = document.getElementById(`ob-ind-${mode}`);
+            if (chosen) {
+                if (mode === 'medical') chosen.classList.add('active-medical');
+                else if (mode === 'grocery') chosen.classList.add('active-grocery');
+                else chosen.classList.add('active');
+            }
+        }
+
+        // Called after Step 3 — go to install step if prompt is available, else finish
+        function obComplete() {
+            // Persist company details entered in onboarding
+            const name  = document.getElementById('ob-company-name')?.value.trim() || '';
+            const phone = document.getElementById('ob-phone')?.value.trim() || '';
+            if (name)  companyDetails.companyName = name;
+            if (phone) companyDetails.phone       = phone;
+            companyDetails.industryMode = _obSelectedIndustry;
+            saveDataToLocalStorage('companyDetails', companyDetails);
+
+            // Decide whether to show install step
+            if (window._deferredInstallPrompt) {
+                obGoStep(4);
+            } else {
+                obFinish();
+            }
+        }
+
+        async function obTriggerInstall() {
+            const prompt = window._deferredInstallPrompt;
+            if (!prompt) { obFinish(); return; }
+            prompt.prompt();
+            const { outcome } = await prompt.userChoice;
+            window._deferredInstallPrompt = null;
+            obFinish();
+        }
+
+        function obFinish() {
+            localStorage.setItem('quickbill-setup-complete', '1');
+            const overlay = document.getElementById('onboarding-overlay');
+            if (overlay) overlay.classList.add('hidden');
+            updateIndustryModeUI(_obSelectedIndustry);
+            renderPage('dashboard');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  CONNECTION MODE (Settings card)
+        // ═══════════════════════════════════════════════════════════
+
+        function setConnectionMode(mode) {
+            localStorage.setItem('quickbill-connection-mode', mode);
+            updateConnectionModeUI(mode);
+            if (mode === 'online') {
+                showToast('☁️ Online mode — data will sync to cloud when signed in');
+            } else {
+                showToast('📱 Offline mode — data stays on this device only');
+            }
+        }
+
+        function updateConnectionModeUI(mode) {
+            const onlineBtn  = document.getElementById('conn-btn-online');
+            const offlineBtn = document.getElementById('conn-btn-offline');
+            if (!onlineBtn) return;
+            onlineBtn.classList.remove('active');
+            offlineBtn.classList.remove('active');
+            if (mode === 'online') onlineBtn.classList.add('active');
+            else                   offlineBtn.classList.add('active');
+
+            const desc = document.getElementById('conn-mode-description');
+            if (desc) {
+                desc.innerHTML = mode === 'online'
+                    ? '☁️ <strong>Online</strong> — Data is backed up to the cloud and syncs across all your signed-in devices.'
+                    : '📱 <strong>Offline</strong> — All data lives on this device only. No account required. Switch to Online any time to enable sync.';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  WELCOME-BACK MODAL (returning online user, session lapsed)
+        // ═══════════════════════════════════════════════════════════
+
+        async function wbHandleGoogle() {
+            if (!window.firebaseSignInWithGoogle) { wbContinueOffline(); return; }
+            const result = await window.firebaseSignInWithGoogle();
+            if (result.success) {
+                location.reload();
+            } else {
+                const err = document.getElementById('wb-auth-error');
+                err.textContent = result.error.replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '');
+                err.classList.remove('hidden');
+            }
+        }
+
+        async function wbHandleSignIn() {
+            const email    = document.getElementById('wb-email').value.trim();
+            const password = document.getElementById('wb-password').value;
+            const err      = document.getElementById('wb-auth-error');
+            err.classList.add('hidden');
+            if (!email || !password) {
+                err.textContent = 'Please enter your email and password.';
+                err.classList.remove('hidden');
+                return;
+            }
+            const result = await window.firebaseSignInWithEmail(email, password);
+            if (result.success) {
+                location.reload();
+            } else {
+                err.textContent = result.error.replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '');
+                err.classList.remove('hidden');
+            }
+        }
+
+        function wbContinueOffline() {
+            // User opts to continue with local data; switch to offline so no sync is attempted
+            localStorage.setItem('quickbill-connection-mode', 'offline');
+            const wb = document.getElementById('welcome-back-overlay');
+            if (wb) wb.style.display = 'none';
+            renderPage('dashboard');
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  AUTO-RECONNECT SYNC (online users, wifi comes back)
+        // ═══════════════════════════════════════════════════════════
+
+        window.addEventListener('online', () => {
+            if (localStorage.getItem('quickbill-connection-mode') !== 'offline' &&
+                window.firebaseUser && !window.firebaseUser.isAnonymous &&
+                typeof window.scheduleAutoSync === 'function') {
+                showToast('✅ Back online — syncing…');
+                window.scheduleAutoSync();
+            }
+        });
     </script>
 </body>
 </html>
