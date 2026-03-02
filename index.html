@@ -1719,6 +1719,11 @@
                     <div id="stock-status"></div>
                 </div>
             </div>
+
+            <div class="chart-container">
+                <div class="chart-title">⚠️ Expiry Alerts</div>
+                <div id="expiry-status"></div>
+            </div>
         </div>
 
         <!-- Create Bill Section -->
@@ -1954,6 +1959,16 @@
                         <input type="tel" id="phone" placeholder="Phone Number" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-black" style="background-color: var(--input-bg); color: var(--text-primary);">
                         <input type="email" id="email" placeholder="Email Address" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-black" style="background-color: var(--input-bg); color: var(--text-primary);">
                         <input type="text" id="gstNumber" placeholder="Tax ID / GSTIN" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-black" style="background-color: var(--input-bg); color: var(--text-primary);">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase px-1" style="color: var(--text-tertiary);">GST Rate (%)</label>
+                            <select id="gstRateSetting" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-black" style="background-color: var(--input-bg); color: var(--text-primary);">
+                                <option value="0">0% — No GST</option>
+                                <option value="5">5%</option>
+                                <option value="12">12%</option>
+                                <option value="18">18%</option>
+                                <option value="28">28%</option>
+                            </select>
+                        </div>
                         <textarea id="defaultBillNotes" placeholder="Default Bill Notes" class="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[100px] focus:ring-2 focus:ring-black" style="background-color: var(--input-bg); color: var(--text-primary);"></textarea>
                         <button type="submit" class="w-full bg-black text-white py-5 rounded-2xl font-black">Update Identity</button>
                     </form>
@@ -2552,11 +2567,25 @@
             return next.toString();
         }
 
+        function isExpiredMedicine(stockItem) {
+            if (getIndustryMode() !== 'medical') return false;
+            if (!stockItem || !stockItem.expiryDate) return false;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const expDate = new Date(stockItem.expiryDate);
+            if (expDate < today) {
+                showToast(`⛔ "${stockItem.name}" is expired (${expDate.toLocaleDateString()}). Cannot be added to bill.`);
+                return true;
+            }
+            return false;
+        }
+
         function lookupBarcode(code) {
             const normalizedCode = (code || '').toString().trim();
             if (!normalizedCode) return;
             const item = stock.find(s => s.barcode && s.barcode.toString().trim() === normalizedCode);
             if (item) {
+                if (isExpiredMedicine(item)) return;
                 addItemRowWithData(item.name, item.price);
                 showToast(`✅ Added: ${item.name} (₹${item.price.toFixed(2)})`);
                 const input = document.getElementById('barcode-lookup-input');
@@ -2641,6 +2670,14 @@
             const autocompleteList = document.createElement('div');
             autocompleteList.setAttribute('id', `autocomplete-list-${index}`);
             autocompleteList.className = 'autocomplete-items';
+
+            // Position anchored to the input using viewport coords.
+            // Appending to document.body bypasses any ancestor contain/transform/overflow
+            // that would clip or re-contain a position:fixed descendant.
+            const rect = input.getBoundingClientRect();
+            autocompleteList.style.top = rect.bottom + 'px';
+            autocompleteList.style.left = rect.left + 'px';
+            autocompleteList.style.width = rect.width + 'px';
             
             // Optimize: Limit results to 10 for better performance
             const matches = stock
@@ -2664,6 +2701,7 @@
                     ` <span style="color: #6b7280; font-size: 0.875rem;">(₹${item.price.toFixed(2)})</span>`;
                 
                 suggestionDiv.addEventListener('click', () => {
+                    if (isExpiredMedicine(item)) { closeAllLists(); return; }
                     input.value = item.name;
                     currentItems[index].product = item.name;
                     currentItems[index].pricePerUnit = parseFloat(item.price);
@@ -2682,7 +2720,7 @@
             });
             
             autocompleteList.appendChild(fragment);
-            input.parentNode.appendChild(autocompleteList);
+            document.body.appendChild(autocompleteList);
         }
         
         function closeAllLists() {
@@ -3188,6 +3226,11 @@
                 pricePerUnit: 0,
                 total: 0
             }];
+            // Populate GST rate label from saved settings
+            const gstRate = companyDetails.gstRate || 0;
+            document.getElementById('gst-rate-label').textContent = gstRate;
+            document.getElementById('apply-gst').checked = false;
+            document.getElementById('gst-breakdown').classList.add('hidden');
             updateProductsTable();
             calculateAndDisplayGrandTotal();
         }
@@ -3284,7 +3327,16 @@
         }
 
         function calculateAndDisplayGrandTotal() {
-            const total = currentItems.reduce((sum, item) => sum + (isNaN(item.total) ? 0 : item.total), 0);
+            const subtotal = currentItems.reduce((sum, item) => sum + (isNaN(item.total) ? 0 : item.total), 0);
+            const applyGst = document.getElementById('apply-gst').checked;
+            const gstRate = companyDetails.gstRate || 0;
+            const gstAmount = applyGst ? subtotal * gstRate / 100 : 0;
+            const total = subtotal + gstAmount;
+
+            document.getElementById('bill-subtotal').textContent = subtotal.toFixed(2);
+            document.getElementById('gst-pct-label2').textContent = gstRate;
+            document.getElementById('bill-gst-amount').textContent = gstAmount.toFixed(2);
+            document.getElementById('gst-breakdown').classList.toggle('hidden', !applyGst);
             document.getElementById('grand-total').textContent = total.toFixed(2);
         }
 
@@ -3321,9 +3373,32 @@
                         const stockItem = stock.find(item => item.name.toLowerCase() === productName.toLowerCase());
 
                         if (stockItem) {
+                            if (isExpiredMedicine(stockItem)) {
+                                currentItems[index].product = '';
+                                currentItems[index].pricePerUnit = 0;
+                                currentItems[index].total = 0;
+                                updateProductsTable();
+                                calculateAndDisplayGrandTotal();
+                                // Refocus the product input so the user can re-enter
+                                setTimeout(() => {
+                                    const billContainer = document.getElementById('bill-items-container');
+                                    const productInputEl = billContainer.querySelector(`input[data-index="${index}"][data-field="product"]`);
+                                    if (productInputEl) productInputEl.focus();
+                                }, 50);
+                                return;
+                            }
+                            const qty = isNaN(currentItems[index].quantity) || currentItems[index].quantity === '' ? 0 : currentItems[index].quantity;
                             currentItems[index].pricePerUnit = parseFloat(stockItem.price);
-                            currentItems[index].total = (isNaN(currentItems[index].quantity) || currentItems[index].quantity === '' ? 0 : currentItems[index].quantity) * currentItems[index].pricePerUnit;
-                            updateProductsTable();
+                            currentItems[index].total = qty * currentItems[index].pricePerUnit;
+                            // Update price and total in-place — do NOT call updateProductsTable()
+                            // which would rebuild the DOM and steal focus from the next field.
+                            const billContainer = document.getElementById('bill-items-container');
+                            const priceInput = billContainer.querySelector(`input[data-index="${index}"][data-field="pricePerUnit"]`);
+                            if (priceInput) {
+                                priceInput.value = currentItems[index].pricePerUnit;
+                                const totalEl = priceInput.closest('tr').querySelector('.item-total');
+                                if (totalEl) totalEl.textContent = currentItems[index].total.toFixed(2);
+                            }
                             calculateAndDisplayGrandTotal();
                         }
                     });
