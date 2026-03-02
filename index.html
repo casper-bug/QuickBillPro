@@ -2286,16 +2286,19 @@
         };
 
         // Sync functions for Firestore
-        window.syncDataToFirestore = async (userId) => {
-            if (!userId || !db) return { success: false, error: 'No user or database' };
+        window.syncDataToFirestore = async (firebaseUid) => {
+            if (!firebaseUid || !db) return { success: false, error: 'No user or database' };
             
             try {
-                const userDoc = doc(db, 'users', userId);
+                // Always read from the stable local storage key so data isn't lost in
+                // the Firebase-timeout fallback case.
+                const localId = window.quickbillLocalUserId || firebaseUid;
+                const userDoc = doc(db, 'users', firebaseUid);
                 const data = {
-                    orders: localStorage.getItem(`quickbill-${userId}-orders`) || '[]',
-                    stock: localStorage.getItem(`quickbill-${userId}-stock`) || '[]',
-                    notes: localStorage.getItem(`quickbill-${userId}-notes`) || '[]',
-                    companyDetails: localStorage.getItem(`quickbill-${userId}-companyDetails`) || '{}',
+                    orders: localStorage.getItem(`quickbill-${localId}-orders`) || '[]',
+                    stock: localStorage.getItem(`quickbill-${localId}-stock`) || '[]',
+                    notes: localStorage.getItem(`quickbill-${localId}-notes`) || '[]',
+                    companyDetails: localStorage.getItem(`quickbill-${localId}-companyDetails`) || '{}',
                     lastSync: new Date().toISOString()
                 };
                 
@@ -2366,15 +2369,18 @@
 
                 // Auto-load cloud data whenever a non-anonymous user signs in
                 if (!user.isAnonymous && typeof window.loadDataFromFirestore === 'function') {
+                    // Remember that this browser has had a named account (used for welcome-back)
+                    localStorage.setItem('quickbill-had-named-account', '1');
                     try {
                         const result = await window.loadDataFromFirestore(user.uid);
                         if (result.success && result.data) {
-                            const uid = user.uid;
-                            if (result.data.orders) localStorage.setItem(`quickbill-${uid}-orders`, result.data.orders);
-                            if (result.data.stock) localStorage.setItem(`quickbill-${uid}-stock`, result.data.stock);
-                            if (result.data.notes) localStorage.setItem(`quickbill-${uid}-notes`, result.data.notes);
-                            if (result.data.companyDetails) localStorage.setItem(`quickbill-${uid}-companyDetails`, result.data.companyDetails);
-                            console.log('Cloud data loaded for user:', uid);
+                            // Write to the stable local key so initializeApp picks it up correctly
+                            const localId = window.quickbillLocalUserId || user.uid;
+                            if (result.data.orders) localStorage.setItem(`quickbill-${localId}-orders`, result.data.orders);
+                            if (result.data.stock) localStorage.setItem(`quickbill-${localId}-stock`, result.data.stock);
+                            if (result.data.notes) localStorage.setItem(`quickbill-${localId}-notes`, result.data.notes);
+                            if (result.data.companyDetails) localStorage.setItem(`quickbill-${localId}-companyDetails`, result.data.companyDetails);
+                            console.log('Cloud data written to local key:', localId);
                         }
                     } catch (e) {
                         console.error('Auto-load from Firestore failed:', e);
@@ -3184,7 +3190,16 @@
             svg.appendChild(polyline);
 
             // Determine how often to show x-axis labels to avoid crowding
-            const labelInterval = daysRange <= 7 ? 1 : daysRange <= 30 ? 5 : daysRange <= 90 ? 2 : 6;
+            let labelInterval;
+            if (daysRange <= 7) {
+                labelInterval = 1;
+            } else if (daysRange <= 30) {
+                labelInterval = 5;
+            } else if (daysRange <= 90) {
+                labelInterval = 2;
+            } else {
+                labelInterval = 6;
+            }
 
             // Data point circles + x-axis labels
             dataPoints.forEach((dp, i) => {
@@ -3357,11 +3372,12 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
+            const MS_PER_DAY = 86400000;
             const itemsWithExpiry = stock
                 .filter(item => item.expiryDate)
                 .map(item => {
                     const expDate = new Date(item.expiryDate);
-                    const diffDays = Math.ceil((expDate - today) / 86400000);
+                    const diffDays = Math.ceil((expDate - today) / MS_PER_DAY);
                     return { ...item, diffDays, expDate };
                 })
                 .sort((a, b) => a.diffDays - b.diffDays);
@@ -3377,11 +3393,17 @@
                 el.className = 'recent-activity-item';
                 let badgeClass, badgeText, iconName;
                 if (item.diffDays < 0) {
-                    badgeClass = 'expired'; badgeText = `⛔ Expired ${Math.abs(item.diffDays)}d ago`; iconName = 'dangerous';
+                    badgeClass = 'expired';
+                    badgeText = `⛔ Expired ${Math.abs(item.diffDays)}d ago`;
+                    iconName = 'dangerous';
                 } else if (item.diffDays <= 30) {
-                    badgeClass = 'warn'; badgeText = `⚠️ Expires in ${item.diffDays}d`; iconName = 'warning';
+                    badgeClass = 'warn';
+                    badgeText = `⚠️ Expires in ${item.diffDays}d`;
+                    iconName = 'warning';
                 } else {
-                    badgeClass = 'ok'; badgeText = `✅ ${item.expDate.toLocaleDateString()}`; iconName = 'check_circle';
+                    badgeClass = 'ok';
+                    badgeText = `✅ ${item.expDate.toLocaleDateString()}`;
+                    iconName = 'check_circle';
                 }
                 el.innerHTML = `
                     <div class="activity-icon"><i class="material-icons">${iconName}</i></div>
@@ -5229,12 +5251,12 @@
             const result = await window.loadDataFromFirestore(window.firebaseUserId);
             
             if (result.success && result.data) {
-                // Load data into localStorage using user-specific keys
-                const uid = window.firebaseUserId;
-                if (result.data.orders) localStorage.setItem(`quickbill-${uid}-orders`, result.data.orders);
-                if (result.data.stock) localStorage.setItem(`quickbill-${uid}-stock`, result.data.stock);
-                if (result.data.notes) localStorage.setItem(`quickbill-${uid}-notes`, result.data.notes);
-                if (result.data.companyDetails) localStorage.setItem(`quickbill-${uid}-companyDetails`, result.data.companyDetails);
+                // Write cloud data to the stable local key (userId) so it is immediately
+                // available in-memory after the reload, regardless of Firebase UID.
+                if (result.data.orders) localStorage.setItem(`quickbill-${userId}-orders`, result.data.orders);
+                if (result.data.stock) localStorage.setItem(`quickbill-${userId}-stock`, result.data.stock);
+                if (result.data.notes) localStorage.setItem(`quickbill-${userId}-notes`, result.data.notes);
+                if (result.data.companyDetails) localStorage.setItem(`quickbill-${userId}-companyDetails`, result.data.companyDetails);
                 
                 showToast('✅ Data loaded successfully! Reloading...');
                 setTimeout(() => location.reload(), 1500);
@@ -5459,7 +5481,7 @@
                 : "Are you sure you want to clear all your data? This will permanently delete your orders, stock, notes, and business details from this device.";
             const confirmed = await showConfirmation(confirmMsg);
             if (confirmed) {
-                const uid = (window.firebaseUserId || userId || 'local');
+                const uid = userId || 'local';
                 const dataKeys = ['orders', 'stock', 'notes', 'companyDetails'];
                 // Write empty data to localStorage for each key
                 dataKeys.forEach(key => {
@@ -5469,7 +5491,7 @@
                 // If signed-in cloud user, push the empty data to Firestore as well
                 if (isOnlineUser && window.syncDataToFirestore) {
                     try {
-                        const result = await window.syncDataToFirestore(uid);
+                        const result = await window.syncDataToFirestore(window.firebaseUserId);
                         if (!result.success) {
                             showToast('⚠️ Local data cleared but cloud sync failed. Try syncing manually.');
                             return;
@@ -5480,6 +5502,7 @@
                     }
                 }
                 localStorage.removeItem('quickbill-setup-complete');
+                localStorage.removeItem('quickbill-had-named-account');
                 showToast("All data cleared successfully. Reloading...");
                 setTimeout(() => {
                     location.reload();
@@ -5526,20 +5549,18 @@
                     loadDarkMode();
                     console.log('Dark mode loaded');
                     
-                    // Use Firebase userId if available, otherwise use a stable persistent local ID
-                    if (window.isFirebaseReady && window.firebaseUserId) {
-                        userId = window.firebaseUserId;
-                        console.log('Using Firebase user ID:', userId);
-                    } else {
-                        // Retrieve or create a persistent ID so data survives page refreshes
-                        let persistedId = localStorage.getItem('quickbill-local-user-id');
-                        if (!persistedId) {
-                            persistedId = 'local-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-                            localStorage.setItem('quickbill-local-user-id', persistedId);
-                        }
-                        userId = persistedId;
-                        console.log('Using persistent local user ID:', userId);
+                    // Always use a stable persistent local ID for localStorage so data
+                    // survives page refreshes in every mode. Cloud sync uses the Firebase
+                    // UID as the Firestore document path but reads/writes the same local keys.
+                    let persistedId = localStorage.getItem('quickbill-local-user-id');
+                    if (!persistedId) {
+                        persistedId = 'local-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+                        localStorage.setItem('quickbill-local-user-id', persistedId);
                     }
+                    userId = persistedId;
+                    // Expose so syncDataToFirestore / loadDataFromFirestore can find the right keys
+                    window.quickbillLocalUserId = userId;
+                    console.log('Using persistent local user ID:', userId);
                     
                     
                     document.getElementById('mobile-user-id').textContent = `User ID: ${userId.substr(0, 12)}...`;
@@ -5595,22 +5616,23 @@
 
                                 const isSetupComplete = localStorage.getItem('quickbill-setup-complete');
                                 const connMode = localStorage.getItem('quickbill-connection-mode') || 'online';
-                                // Welcome-back only when setup is done, mode is online, AND the user
-                                // has NO real Firebase account (uid starts with anonymous prefix or
-                                // firebaseUser.isAnonymous — meaning the named account session is gone)
                                 const hasNamedAccount = window.firebaseUser && !window.firebaseUser.isAnonymous;
-                                const shouldShowWelcomeBack = connMode === 'online' && !hasNamedAccount;
+                                // Only re-prompt sign-in when the user *previously* had a named account
+                                // (session lapsed). Never block first-time or always-anonymous users.
+                                const hadNamedAccount = localStorage.getItem('quickbill-had-named-account') === '1';
+                                const shouldShowWelcomeBack = connMode === 'online' && hadNamedAccount && !hasNamedAccount;
 
                                 if (!isSetupComplete) {
                                     // First-time user → onboarding
                                     showOnboarding();
-                                } else if (shouldShowWelcomeBack) {
-                                    // Returning online user — no active named account → welcome-back
-                                    const wb = document.getElementById('welcome-back-overlay');
-                                    if (wb) { wb.style.display = 'flex'; }
                                 } else {
-                                    console.log('Rendering dashboard...');
+                                    // Render dashboard immediately so local data is always accessible
                                     renderPage('dashboard');
+                                    if (shouldShowWelcomeBack) {
+                                        // Session lapsed — prompt to re-sign-in for cloud sync
+                                        const wb = document.getElementById('welcome-back-overlay');
+                                        if (wb) { wb.style.display = 'flex'; }
+                                    }
                                     console.log('App loaded successfully!');
                                 }
                             }, 250);
@@ -5889,11 +5911,10 @@
         }
 
         function wbContinueOffline() {
-            // User opts to continue with local data; switch to offline so no sync is attempted
-            localStorage.setItem('quickbill-connection-mode', 'offline');
+            // Dismiss the welcome-back overlay; the dashboard is already rendered behind it.
+            // Do NOT force offline mode — the user keeps whatever mode they chose.
             const wb = document.getElementById('welcome-back-overlay');
             if (wb) wb.style.display = 'none';
-            renderPage('dashboard');
         }
 
         // ═══════════════════════════════════════════════════════════
