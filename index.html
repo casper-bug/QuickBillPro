@@ -2655,7 +2655,7 @@
                         ₹<span class="item-total">${item.total.toFixed(2)}</span>
                     </td>
                     <td class="py-3 px-4 text-center">
-                        ${currentItems.length > 1 ? `<button type="button" data-action="remove" data-index="${index}" class="text-red-400 hover:text-red-600 text-xl font-bold transition-colors">&times;</button>` : ''}
+                        <button type="button" data-action="remove" data-index="${index}" class="text-red-400 hover:text-red-600 text-xl font-bold transition-colors">&times;</button>
                     </td>
                 `;
                 container.appendChild(row);
@@ -2665,6 +2665,13 @@
         }
 
         function addItemRow() {
+            const lastItem = currentItems.length > 0 ? currentItems[currentItems.length - 1] : null;
+            if (lastItem && lastItem.product.trim() === '') {
+                const lastIndex = currentItems.length - 1;
+                const lastInput = document.querySelector(`input[data-index="${lastIndex}"][data-field="product"]`);
+                if (lastInput) lastInput.focus();
+                return;
+            }
             currentItems.push({
                 product: '',
                 quantity: '',
@@ -2693,7 +2700,11 @@
         }
 
         function removeItemRow(index) {
-            currentItems.splice(index, 1);
+            if (currentItems.length === 1) {
+                currentItems[0] = { product: '', quantity: '', pricePerUnit: 0, total: 0 };
+            } else {
+                currentItems.splice(index, 1);
+            }
             updateProductsTable();
             calculateAndDisplayGrandTotal();
         }
