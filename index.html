@@ -1829,7 +1829,7 @@
 
             <div class="rounded-[3rem] shadow-sm overflow-hidden transition-colors" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
                 <div class="mobile-table-container">
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full min-w-[650px] text-left border-collapse">
                         <thead style="background-color: var(--bg-tertiary);">
                             <tr>
                                 <th class="p-8 text-[10px] font-black uppercase" style="color: var(--text-secondary);">Product</th>
@@ -3587,7 +3587,7 @@
                             </td>
                             <td class="p-8 font-bold text-gray-500">₹${item.price.toFixed(2)}</td>
                             <td class="p-8">
-                                <span class="px-4 py-2 rounded-xl text-sm font-bold ${isLowStock ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}">
+                                <span class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap ${isLowStock ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}">
                                     ${item.quantity} units
                                 </span>
                             </td>
