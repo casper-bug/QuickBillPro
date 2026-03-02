@@ -315,20 +315,40 @@
 
         #ob-dark-mode-btn {
             position: absolute;
-            top: 1rem;
-            right: 1rem;
+            bottom: 1.5rem;
+            right: 1.5rem;
             z-index: 10;
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 50%;
-            border: none;
-            cursor: pointer;
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
+            gap: 0.4rem;
+            padding: 0.35rem 0.6rem 0.35rem 0.5rem;
+            border-radius: 2rem;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
             background: var(--bg-secondary);
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            color: var(--text-secondary);
+            transition: background 0.2s, border-color 0.2s;
+        }
+        #ob-dm-track {
+            position: relative;
+            width: 2rem;
+            height: 1.125rem;
+            border-radius: 1rem;
+            background: #cbd5e1;
+            transition: background 0.3s;
+            flex-shrink: 0;
+        }
+        #ob-dm-thumb {
+            position: absolute;
+            top: 0.125rem;
+            left: 0.125rem;
+            width: 0.875rem;
+            height: 0.875rem;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+            transition: transform 0.3s;
         }
 
         .ob-card {
@@ -437,6 +457,10 @@
             background: rgba(16, 185, 129, 0.10);
             color: #10b981;
         }
+
+        .ob-primary-btn { background: #111827; color: #fff; }
+        [data-theme="dark"] .ob-primary-btn { background: #3b82f6; color: #fff; }
+        #ob-dm-icon { font-size: 1rem; }
 
         /* Caution badge for high-risk medicines */
         .caution-badge {
@@ -1435,8 +1459,11 @@
          ════════════════════════════════ -->
     <div id="onboarding-overlay" class="hidden">
 
-        <!-- Dark mode toggle button in top-right corner -->
-        <button onclick="toggleDarkMode()" id="ob-dark-mode-btn" aria-label="Toggle dark/light mode">🌙</button>
+        <!-- Dark mode toggle button in bottom-right corner -->
+        <button onclick="toggleDarkMode()" id="ob-dark-mode-btn" aria-label="Toggle dark/light mode">
+            <i class="material-icons" id="ob-dm-icon">light_mode</i>
+            <div id="ob-dm-track"><div id="ob-dm-thumb"></div></div>
+        </button>
 
         <!-- ── Step 0: Welcome ── -->
         <div class="ob-step active" id="ob-step-0">
@@ -1448,7 +1475,8 @@
                     <h1 class="text-2xl font-black tracking-tight" style="color:var(--text-primary);">Welcome to<br>QUICKBILL<span style="color:#3b82f6;">PRO</span></h1>
                     <p class="text-sm mt-2" style="color:var(--text-secondary);">Fast, modern billing for your business. Let's get you set up in under a minute.</p>
                 </div>
-                <button onclick="obGoStep(1)" class="w-full bg-black text-white py-4 rounded-2xl font-black text-base hover:opacity-90 transition-opacity" style="background:#111827;">Get Started →</button>
+                <button onclick="obGoStep(1)" class="w-full ob-primary-btn py-4 rounded-2xl font-black text-base hover:opacity-90 transition-opacity">Get Started →</button>
+                <button class="ob-skip-link" onclick="obChooseMode('online')">Already have an account? <span style="text-decoration:underline;">Sign in</span></button>
             </div>
         </div>
 
@@ -1555,7 +1583,7 @@
                         </button>
                     </div>
                 </div>
-                <button onclick="obComplete()" class="w-full bg-black text-white py-4 rounded-2xl font-black text-base hover:opacity-90 transition-opacity" style="background:#111827;">Let's go →</button>
+                <button onclick="obComplete()" class="w-full ob-primary-btn py-4 rounded-2xl font-black text-base hover:opacity-90 transition-opacity">Let's go →</button>
                 <button class="ob-skip-link" onclick="obComplete()">Skip — set up later</button>
                 <p class="text-xs text-center" style="color:var(--text-tertiary);">💡 All business details can be changed later in <strong>Settings</strong>.</p>
             </div>
@@ -2031,11 +2059,6 @@
                             <p class="text-xs" style="color: var(--text-secondary);">You're using local storage only. Sign in to sync data across devices.</p>
                         </div>
                         
-                        <!-- Auth Method Tabs -->
-                        <div class="flex gap-2 p-1 rounded-2xl" style="background-color: var(--bg-tertiary);">
-                            <button id="tab-email" onclick="switchAuthTab('email')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-colors" style="background-color: var(--bg-secondary); color: var(--text-primary);">Email</button>
-                        </div>
-                        
                         <!-- Email Sign In Form -->
                         <div id="email-signin-form" class="space-y-3">
                             <input type="email" id="auth-email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
@@ -2389,7 +2412,10 @@
             const html = document.documentElement;
             const toggle = document.getElementById('dark-mode-toggle');
             const slider = document.getElementById('dark-mode-slider');
-            const obBtn = document.getElementById('ob-dark-mode-btn');
+            const obBtn  = document.getElementById('ob-dark-mode-btn');
+            const obIcon  = document.getElementById('ob-dm-icon');
+            const obTrack = document.getElementById('ob-dm-track');
+            const obThumb = document.getElementById('ob-dm-thumb');
             
             if (darkMode) {
                 html.setAttribute('data-theme', 'dark');
@@ -2398,7 +2424,9 @@
                     slider.style.transform = 'translateX(32px)';
                     slider.style.backgroundColor = '#ffffff';
                 }
-                if (obBtn) obBtn.textContent = '☀️';
+                if (obIcon)  obIcon.textContent = 'dark_mode';
+                if (obTrack) obTrack.style.background = '#3b82f6';
+                if (obThumb) obThumb.style.transform = 'translateX(0.875rem)';
             } else {
                 html.removeAttribute('data-theme');
                 if (toggle) toggle.style.backgroundColor = '#cbd5e1';
@@ -2406,7 +2434,9 @@
                     slider.style.transform = 'translateX(0)';
                     slider.style.backgroundColor = '#ffffff';
                 }
-                if (obBtn) obBtn.textContent = '🌙';
+                if (obIcon)  obIcon.textContent = 'light_mode';
+                if (obTrack) obTrack.style.background = '#cbd5e1';
+                if (obThumb) obThumb.style.transform = 'translateX(0)';
             }
         }
         
