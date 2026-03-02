@@ -1539,6 +1539,16 @@
                         <button type="button" onclick="obHandleSignIn()" class="flex-1 bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
                         <button type="button" onclick="obHandleSignUp()" class="flex-1 py-3 rounded-2xl font-bold text-sm transition-colors" style="background:var(--bg-tertiary); color:var(--text-primary);">Sign Up</button>
                     </div>
+                    <button type="button" onclick="obToggleForgotPassword()" class="text-xs text-blue-600 hover:underline font-medium">Forgot Password?</button>
+                    <div id="ob-forgot-password-form" class="hidden p-4 rounded-2xl border space-y-3" style="background-color: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3);">
+                        <p class="text-xs font-bold" style="color: var(--text-primary);">Reset Your Password</p>
+                        <p class="text-xs" style="color: var(--text-secondary);">Enter your email and we'll send a password reset link.</p>
+                        <input type="email" id="ob-reset-email" placeholder="Email" class="w-full p-3 rounded-xl outline-none focus:ring-2 focus:ring-purple-500 text-sm" style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+                        <div class="flex gap-2">
+                            <button type="button" onclick="obHandlePasswordReset()" class="flex-1 bg-purple-600 text-white py-3 rounded-xl font-bold text-xs hover:bg-purple-700 transition-colors">Send Reset Link</button>
+                            <button type="button" onclick="obToggleForgotPassword()" class="flex-1 py-3 rounded-xl font-bold text-xs hover:bg-gray-200 transition-colors" style="background-color: var(--bg-tertiary); color: var(--text-primary);">Cancel</button>
+                        </div>
+                    </div>
                 </form>
                 <button class="ob-skip-link" onclick="obGoStep(3)">Skip for now — I'll sign in later</button>
             </div>
@@ -1633,6 +1643,16 @@
                     style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
                 <p id="wb-auth-error" class="text-xs text-red-500 hidden"></p>
                 <button type="button" onclick="wbHandleSignIn()" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
+                <button type="button" onclick="wbToggleForgotPassword()" class="text-xs text-blue-600 hover:underline font-medium">Forgot Password?</button>
+                <div id="wb-forgot-password-form" class="hidden p-4 rounded-2xl border space-y-3" style="background-color: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3);">
+                    <p class="text-xs font-bold" style="color: var(--text-primary);">Reset Your Password</p>
+                    <p class="text-xs" style="color: var(--text-secondary);">Enter your email and we'll send a password reset link.</p>
+                    <input type="email" id="wb-reset-email" placeholder="Email" class="w-full p-3 rounded-xl outline-none focus:ring-2 focus:ring-purple-500 text-sm" style="background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary);">
+                    <div class="flex gap-2">
+                        <button type="button" onclick="wbHandlePasswordReset()" class="flex-1 bg-purple-600 text-white py-3 rounded-xl font-bold text-xs hover:bg-purple-700 transition-colors">Send Reset Link</button>
+                        <button type="button" onclick="wbToggleForgotPassword()" class="flex-1 py-3 rounded-xl font-bold text-xs hover:bg-gray-200 transition-colors" style="background-color: var(--bg-tertiary); color: var(--text-primary);">Cancel</button>
+                    </div>
+                </div>
             </form>
             <button class="ob-skip-link" onclick="wbContinueOffline()">Continue with local data instead</button>
         </div>
@@ -2180,16 +2200,6 @@
 
         // Parse Firebase configuration
         const firebaseConfig = JSON.parse(typeof window.__firebase_config !== 'undefined' ? window.__firebase_config : '{}');
-
-        if (!firebaseConfig.projectId) {
-            console.warn("Firebase config not fully provided. Using default values.");
-            firebaseConfig.apiKey = firebaseConfig.apiKey || "AIzaSyAyX3Y9TJaTW5HDz0Hb1Z_o6YmpucB9fqc";
-            firebaseConfig.authDomain = firebaseConfig.authDomain || "quickbill-33bf7.firebaseapp.com";
-            firebaseConfig.projectId = firebaseConfig.projectId || "quickbill-33bf7";
-            firebaseConfig.storageBucket = firebaseConfig.storageBucket || "quickbill-33bf7.firebasestorage.app";
-            firebaseConfig.messagingSenderId = firebaseConfig.messagingSenderId || "749941620593";
-            firebaseConfig.appId = firebaseConfig.appId || "1:749941620593:web:4ae8ba14e6b5291dfd00d0";
-        }
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -4929,41 +4939,33 @@
         
         window.handleEmailSignUp = handleEmailSignUp;
 
-        function toggleForgotPassword() {
-            const forgotForm = document.getElementById('forgot-password-form');
-            const isHidden = forgotForm?.classList.contains('hidden');
-            if (isHidden) {
-                forgotForm?.classList.remove('hidden');
-            } else {
-                forgotForm?.classList.add('hidden');
-                document.getElementById('reset-email').value = '';
+        function toggleResetForm(formId, emailInputId) {
+            const form = document.getElementById(formId);
+            if (!form) return;
+            const wasHidden = form.classList.contains('hidden');
+            form.classList.toggle('hidden');
+            if (!wasHidden && emailInputId) {
+                const input = document.getElementById(emailInputId);
+                if (input) input.value = '';
             }
         }
 
-        window.toggleForgotPassword = toggleForgotPassword;
-
-        async function handlePasswordReset() {
-            const email = document.getElementById('reset-email').value.trim();
-            
+        async function sendPasswordReset(emailInputId, formId) {
+            const email = document.getElementById(emailInputId)?.value.trim();
             if (!email) {
                 showToast('Please enter your email address');
                 return;
             }
-            
-            // Basic email validation
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
                 showToast('Please enter a valid email address');
                 return;
             }
-            
             showToast('Sending password reset email...');
             const result = await window.firebaseResetPassword(email);
-            
             if (result.success) {
                 showToast('✅ Password reset email sent! Check your inbox.');
-                document.getElementById('reset-email').value = '';
-                toggleForgotPassword();
+                toggleResetForm(formId, emailInputId);
             } else {
                 if (result.error.includes('user-not-found')) {
                     showToast('❌ No account found with this email address');
@@ -4977,7 +4979,39 @@
             }
         }
 
+        function toggleForgotPassword() {
+            toggleResetForm('forgot-password-form', 'reset-email');
+        }
+
+        window.toggleForgotPassword = toggleForgotPassword;
+
+        async function handlePasswordReset() {
+            await sendPasswordReset('reset-email', 'forgot-password-form');
+        }
+
         window.handlePasswordReset = handlePasswordReset;
+
+        function obToggleForgotPassword() {
+            toggleResetForm('ob-forgot-password-form', 'ob-reset-email');
+        }
+
+        async function obHandlePasswordReset() {
+            await sendPasswordReset('ob-reset-email', 'ob-forgot-password-form');
+        }
+
+        window.obToggleForgotPassword = obToggleForgotPassword;
+        window.obHandlePasswordReset = obHandlePasswordReset;
+
+        function wbToggleForgotPassword() {
+            toggleResetForm('wb-forgot-password-form', 'wb-reset-email');
+        }
+
+        async function wbHandlePasswordReset() {
+            await sendPasswordReset('wb-reset-email', 'wb-forgot-password-form');
+        }
+
+        window.wbToggleForgotPassword = wbToggleForgotPassword;
+        window.wbHandlePasswordReset = wbHandlePasswordReset;
 
         // Password validation with visual feedback
         function validatePassword(password) {
