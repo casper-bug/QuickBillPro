@@ -1109,13 +1109,13 @@
             .chart-container {
                 padding: 0.875rem !important;
                 height: auto !important;
-                min-height: 220px;
+                min-height: 260px;
                 overflow-x: auto;
-                overflow-y: hidden;
+                overflow-y: auto;
             }
             
             .simple-bar-chart {
-                height: 150px !important;
+                height: 200px !important;
                 gap: 0.5rem !important;
             }
             
@@ -1124,7 +1124,7 @@
             }
             
             .simple-line-chart {
-                height: 150px !important;
+                height: 210px !important;
             }
             
             .chart-title {
@@ -1719,6 +1719,11 @@
                     <div id="stock-status"></div>
                 </div>
             </div>
+
+            <div class="chart-container">
+                <div class="chart-title">⚠️ Expiry Alerts</div>
+                <div id="expiry-status"></div>
+            </div>
         </div>
 
         <!-- Create Bill Section -->
@@ -1829,7 +1834,7 @@
 
             <div class="rounded-[3rem] shadow-sm overflow-hidden transition-colors" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
                 <div class="mobile-table-container">
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full min-w-[650px] text-left border-collapse">
                         <thead style="background-color: var(--bg-tertiary);">
                             <tr>
                                 <th class="p-8 text-[10px] font-black uppercase" style="color: var(--text-secondary);">Product</th>
@@ -1954,6 +1959,16 @@
                         <input type="tel" id="phone" placeholder="Phone Number" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-black" style="background-color: var(--input-bg); color: var(--text-primary);">
                         <input type="email" id="email" placeholder="Email Address" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-black" style="background-color: var(--input-bg); color: var(--text-primary);">
                         <input type="text" id="gstNumber" placeholder="Tax ID / GSTIN" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-black" style="background-color: var(--input-bg); color: var(--text-primary);">
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-black uppercase px-1" style="color: var(--text-tertiary);">GST Rate (%)</label>
+                            <select id="gstRateSetting" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-black" style="background-color: var(--input-bg); color: var(--text-primary);">
+                                <option value="0">0% — No GST</option>
+                                <option value="5">5%</option>
+                                <option value="12">12%</option>
+                                <option value="18">18%</option>
+                                <option value="28">28%</option>
+                            </select>
+                        </div>
                         <textarea id="defaultBillNotes" placeholder="Default Bill Notes" class="w-full p-4 bg-gray-50 rounded-2xl outline-none min-h-[100px] focus:ring-2 focus:ring-black" style="background-color: var(--input-bg); color: var(--text-primary);"></textarea>
                         <button type="submit" class="w-full bg-black text-white py-5 rounded-2xl font-black">Update Identity</button>
                     </form>
@@ -2046,7 +2061,7 @@
                             Import Recovery File
                             <input type="file" id="import-file-input" class="hidden" onchange="importData(event)">
                         </label>
-                        <button onclick="resetApp()" class="w-full bg-red-50 text-red-500 py-5 rounded-2xl font-black text-sm hover:bg-red-100 transition-colors">Wipe Local Storage</button>
+                        <button onclick="resetApp()" class="w-full bg-red-50 text-red-500 py-5 rounded-2xl font-black text-sm hover:bg-red-100 transition-colors">Clear My Data</button>
                     </div>
                 </div>
             </div>
@@ -2552,11 +2567,25 @@
             return next.toString();
         }
 
+        function isExpiredMedicine(stockItem) {
+            if (getIndustryMode() !== 'medical') return false;
+            if (!stockItem || !stockItem.expiryDate) return false;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const expDate = new Date(stockItem.expiryDate);
+            if (expDate < today) {
+                showToast(`⛔ "${stockItem.name}" is expired (${expDate.toLocaleDateString()}). Cannot be added to bill.`);
+                return true;
+            }
+            return false;
+        }
+
         function lookupBarcode(code) {
             const normalizedCode = (code || '').toString().trim();
             if (!normalizedCode) return;
             const item = stock.find(s => s.barcode && s.barcode.toString().trim() === normalizedCode);
             if (item) {
+                if (isExpiredMedicine(item)) return;
                 addItemRowWithData(item.name, item.price);
                 showToast(`✅ Added: ${item.name} (₹${item.price.toFixed(2)})`);
                 const input = document.getElementById('barcode-lookup-input');
@@ -2641,6 +2670,14 @@
             const autocompleteList = document.createElement('div');
             autocompleteList.setAttribute('id', `autocomplete-list-${index}`);
             autocompleteList.className = 'autocomplete-items';
+
+            // Position anchored to the input using viewport coords.
+            // Appending to document.body bypasses any ancestor contain/transform/overflow
+            // that would clip or re-contain a position:fixed descendant.
+            const rect = input.getBoundingClientRect();
+            autocompleteList.style.top = rect.bottom + 'px';
+            autocompleteList.style.left = rect.left + 'px';
+            autocompleteList.style.width = rect.width + 'px';
             
             // Optimize: Limit results to 10 for better performance
             const matches = stock
@@ -2664,6 +2701,7 @@
                     ` <span style="color: #6b7280; font-size: 0.875rem;">(₹${item.price.toFixed(2)})</span>`;
                 
                 suggestionDiv.addEventListener('click', () => {
+                    if (isExpiredMedicine(item)) { closeAllLists(); return; }
                     input.value = item.name;
                     currentItems[index].product = item.name;
                     currentItems[index].pricePerUnit = parseFloat(item.price);
@@ -2682,7 +2720,7 @@
             });
             
             autocompleteList.appendChild(fragment);
-            input.parentNode.appendChild(autocompleteList);
+            document.body.appendChild(autocompleteList);
         }
         
         function closeAllLists() {
@@ -3188,6 +3226,11 @@
                 pricePerUnit: 0,
                 total: 0
             }];
+            // Populate GST rate label from saved settings
+            const gstRate = companyDetails.gstRate || 0;
+            document.getElementById('gst-rate-label').textContent = gstRate;
+            document.getElementById('apply-gst').checked = false;
+            document.getElementById('gst-breakdown').classList.add('hidden');
             updateProductsTable();
             calculateAndDisplayGrandTotal();
         }
@@ -3284,7 +3327,16 @@
         }
 
         function calculateAndDisplayGrandTotal() {
-            const total = currentItems.reduce((sum, item) => sum + (isNaN(item.total) ? 0 : item.total), 0);
+            const subtotal = currentItems.reduce((sum, item) => sum + (isNaN(item.total) ? 0 : item.total), 0);
+            const applyGst = document.getElementById('apply-gst').checked;
+            const gstRate = companyDetails.gstRate || 0;
+            const gstAmount = applyGst ? subtotal * gstRate / 100 : 0;
+            const total = subtotal + gstAmount;
+
+            document.getElementById('bill-subtotal').textContent = subtotal.toFixed(2);
+            document.getElementById('gst-pct-label2').textContent = gstRate;
+            document.getElementById('bill-gst-amount').textContent = gstAmount.toFixed(2);
+            document.getElementById('gst-breakdown').classList.toggle('hidden', !applyGst);
             document.getElementById('grand-total').textContent = total.toFixed(2);
         }
 
@@ -3321,9 +3373,32 @@
                         const stockItem = stock.find(item => item.name.toLowerCase() === productName.toLowerCase());
 
                         if (stockItem) {
+                            if (isExpiredMedicine(stockItem)) {
+                                currentItems[index].product = '';
+                                currentItems[index].pricePerUnit = 0;
+                                currentItems[index].total = 0;
+                                updateProductsTable();
+                                calculateAndDisplayGrandTotal();
+                                // Refocus the product input so the user can re-enter
+                                setTimeout(() => {
+                                    const billContainer = document.getElementById('bill-items-container');
+                                    const productInputEl = billContainer.querySelector(`input[data-index="${index}"][data-field="product"]`);
+                                    if (productInputEl) productInputEl.focus();
+                                }, 50);
+                                return;
+                            }
+                            const qty = isNaN(currentItems[index].quantity) || currentItems[index].quantity === '' ? 0 : currentItems[index].quantity;
                             currentItems[index].pricePerUnit = parseFloat(stockItem.price);
-                            currentItems[index].total = (isNaN(currentItems[index].quantity) || currentItems[index].quantity === '' ? 0 : currentItems[index].quantity) * currentItems[index].pricePerUnit;
-                            updateProductsTable();
+                            currentItems[index].total = qty * currentItems[index].pricePerUnit;
+                            // Update price and total in-place — do NOT call updateProductsTable()
+                            // which would rebuild the DOM and steal focus from the next field.
+                            const billContainer = document.getElementById('bill-items-container');
+                            const priceInput = billContainer.querySelector(`input[data-index="${index}"][data-field="pricePerUnit"]`);
+                            if (priceInput) {
+                                priceInput.value = currentItems[index].pricePerUnit;
+                                const totalEl = priceInput.closest('tr').querySelector('.item-total');
+                                if (totalEl) totalEl.textContent = currentItems[index].total.toFixed(2);
+                            }
                             calculateAndDisplayGrandTotal();
                         }
                     });
@@ -3587,7 +3662,7 @@
                             </td>
                             <td class="p-8 font-bold text-gray-500">₹${item.price.toFixed(2)}</td>
                             <td class="p-8">
-                                <span class="px-4 py-2 rounded-xl text-sm font-bold ${isLowStock ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}">
+                                <span class="px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap ${isLowStock ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}">
                                     ${item.quantity} units
                                 </span>
                             </td>
@@ -5157,10 +5232,33 @@
         });
 
         async function resetApp() {
-            const confirmed = await showConfirmation("Are you sure you want to reset the application? This will permanently delete ALL your data and reload the site.");
+            const isOnlineUser = window.firebaseUser && !window.firebaseUser.isAnonymous;
+            const confirmMsg = isOnlineUser
+                ? "Are you sure you want to clear all your data? This will permanently delete your orders, stock, notes, and business details from this device and the cloud. Your account will not be deleted."
+                : "Are you sure you want to clear all your data? This will permanently delete your orders, stock, notes, and business details from this device.";
+            const confirmed = await showConfirmation(confirmMsg);
             if (confirmed) {
-                localStorage.clear();
-                showToast("Application reset successfully. Reloading...");
+                const uid = (window.firebaseUserId || userId || 'local');
+                const dataKeys = ['orders', 'stock', 'notes', 'companyDetails'];
+                // Write empty data to localStorage for each key
+                dataKeys.forEach(key => {
+                    const defaultVal = key === 'companyDetails' ? '{}' : '[]';
+                    localStorage.setItem(`quickbill-${uid}-${key}`, defaultVal);
+                });
+                // If signed-in cloud user, push the empty data to Firestore as well
+                if (isOnlineUser && window.syncDataToFirestore) {
+                    try {
+                        const result = await window.syncDataToFirestore(uid);
+                        if (!result.success) {
+                            showToast('⚠️ Local data cleared but cloud sync failed. Try syncing manually.');
+                            return;
+                        }
+                    } catch (e) {
+                        showToast('⚠️ Local data cleared but cloud sync failed. Try syncing manually.');
+                        return;
+                    }
+                }
+                showToast("All data cleared successfully. Reloading...");
                 setTimeout(() => {
                     location.reload();
                 }, 1000);
