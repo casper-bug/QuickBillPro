@@ -222,7 +222,17 @@
         /* --- Print Utilities --- */
         @media print {
             .no-print { display: none !important; }
-            body { background: white; }
+            body { background: white; margin: 0; padding: 0; }
+            /* Hide everything except the bill when printing */
+            body > *:not(#bill-to-print) { display: none !important; }
+            #bill-to-print {
+                position: static !important;
+                left: auto !important;
+                top: auto !important;
+                width: 100% !important;
+                display: block !important;
+                padding: 0 !important;
+            }
         }
         
         /* Loading overlay (Optimized) */
@@ -1261,6 +1271,72 @@
             /* Reduce excessive table cell padding on mobile */
             table th, table td {
                 padding: 0.625rem 0.75rem !important;
+            }
+
+            /* ── Bill items table → card layout on mobile ── */
+            #products-table {
+                display: block !important;
+            }
+            #products-table thead {
+                display: none !important;
+            }
+            #products-table tbody {
+                display: block !important;
+            }
+            #bill-items-container tr {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                align-items: flex-end !important;
+                gap: 0.4rem !important;
+                padding: 0.75rem !important;
+                border-bottom: 1px solid var(--border-color) !important;
+            }
+            /* Product name — full width top row */
+            #bill-items-container td:nth-child(1) {
+                width: 100% !important;
+                padding: 0 !important;
+            }
+            /* Qty and Price — side by side, equal halves */
+            #bill-items-container td:nth-child(2),
+            #bill-items-container td:nth-child(3) {
+                flex: 1 1 0 !important;
+                padding: 0 !important;
+                min-width: 0 !important;
+            }
+            /* Total — compact, aligned bottom */
+            #bill-items-container td:nth-child(4) {
+                flex: 0 0 auto !important;
+                display: flex !important;
+                align-items: flex-end !important;
+                padding: 0 0.25rem 0.3rem !important;
+                font-size: 0.9rem !important;
+                font-weight: 700 !important;
+            }
+            /* Remove × button — aligned bottom */
+            #bill-items-container td:nth-child(5) {
+                flex: 0 0 auto !important;
+                display: flex !important;
+                align-items: flex-end !important;
+                padding: 0 0 0.1rem !important;
+            }
+            /* Inputs — compact, full-width within their cell */
+            #bill-items-container input {
+                width: 100% !important;
+                min-width: 0 !important;
+                padding: 0.55rem 0.625rem !important;
+                font-size: 0.875rem !important;
+                border-radius: 0.75rem !important;
+            }
+            /* Mini label above qty/price inputs */
+            #bill-items-container td[data-label]::before {
+                content: attr(data-label);
+                display: block;
+                font-size: 0.6rem;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                margin-bottom: 0.2rem;
+                color: var(--text-tertiary);
             }
 
             /* Reduce oversized card padding on mobile */
@@ -2432,8 +2508,7 @@
 
                 localStorage.setItem(lsKey, JSON.stringify(dataToStore));
                 // Trigger auto-sync only for online mode
-                if (typeof window.scheduleAutoSync === 'function' &&
-                    localStorage.getItem('quickbill-connection-mode') !== 'offline') {
+                if (shouldAutoSync()) {
                     window.scheduleAutoSync();
                 }
             } catch (error) {
@@ -3114,15 +3189,15 @@
                             ${cautionHtml}
                         </div>
                     </td>
-                    <td class="py-3 px-4">
+                    <td class="py-3 px-4" data-label="Qty">
                         <input type="number" data-field="quantity" data-index="${index}" value="${item.quantity || ''}" step="1" min="1"
                             class="block w-full px-4 py-3 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                            style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" required />
+                            style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" placeholder="Qty" required />
                     </td>
-                    <td class="py-3 px-4">
+                    <td class="py-3 px-4" data-label="Price">
                         <input type="number" data-field="pricePerUnit" data-index="${index}" value="${item.pricePerUnit || ''}" step="0.01"
                             class="block w-full px-4 py-3 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                            style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" min="0" required />
+                            style="background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color);" placeholder="Price" min="0" required />
                     </td>
                     <td class="py-3 px-4 text-right font-medium text-lg">
                         ₹<span class="item-total">${item.total.toFixed(2)}</span>
@@ -3891,7 +3966,10 @@
             if (isCompleted) {
                 actionsHtml = `
                     <button onclick="handlePrintBill('${order.id}', 'photo')" class="bg-black text-white px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-800 transition-colors shadow-sm flex items-center justify-center gap-2">
-                        <i class="material-icons">image</i> Export Photo
+                        <i class="material-icons">download</i> Download
+                    </button>
+                    <button onclick="handlePrintBill('${order.id}', 'print')" class="bg-gray-100 px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-200 transition-colors shadow-sm flex items-center justify-center gap-2" style="background-color:var(--bg-tertiary);color:var(--text-primary);">
+                        <i class="material-icons">print</i> Print
                     </button>
                     <button onclick="handleToggleDelivered('${order.id}', true)" class="bg-gray-600 text-white px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-700 transition-colors shadow-sm flex items-center justify-center gap-2">
                         <i class="material-icons">unarchive</i> Move to Active
@@ -3957,7 +4035,10 @@
                 } else {
                     actionsHtml = `
                         <button onclick="handlePrintBill('${order.id}', 'photo')" class="bg-black text-white px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-800 transition-colors shadow-sm flex items-center justify-center gap-2">
-                            <i class="material-icons">image</i> Photo
+                            <i class="material-icons">download</i> Download
+                        </button>
+                        <button onclick="handlePrintBill('${order.id}', 'print')" class="bg-gray-100 px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-200 transition-colors shadow-sm flex items-center justify-center gap-2" style="background-color:var(--bg-tertiary);color:var(--text-primary);">
+                            <i class="material-icons">print</i> Print
                         </button>
                         <button onclick="handleEditOrder('${order.id}')" class="bg-gray-600 text-white px-6 py-3 rounded-2xl text-sm font-black hover:bg-gray-700 transition-colors shadow-sm flex items-center justify-center gap-2">
                             <i class="material-icons">edit</i> Edit
@@ -4308,108 +4389,157 @@
         window.handlePrintBill = async (orderId, format) => {
             const order = orders.find(o => o.id === orderId) || completedOrders.find(o => o.id === orderId);
             if (!order) {
-                showToast("Order not found for printing.");
+                showToast("Order not found.");
                 return;
             }
 
-            if (typeof window.html2canvas === 'undefined') {
-                showToast("Loading image export library...");
+            // html2canvas is only needed for PNG download, not for print
+            if (format === 'photo' && typeof window.html2canvas === 'undefined') {
+                showToast("Loading export library…");
                 try {
                     await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
                 } catch (error) {
-                    console.error("Error loading html2canvas library:", error);
-                    showToast(`Image export features are not available. ${error.message}`);
+                    showToast(`❌ Export library unavailable: ${error.message}`);
                     return;
                 }
             }
 
             const billToPrintDiv = document.getElementById('bill-to-print');
-            const dateOptions = {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            };
-            const timeOptions = {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            };
-
-            const billNotes = companyDetails.defaultBillNotes || '';
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit' };
+            const billNotes   = companyDetails.defaultBillNotes || '';
+            const invoiceNo   = (order.id || '').toString().slice(-8).toUpperCase();
+            const invoiceDate = new Date(order.orderDate).toLocaleDateString(undefined, dateOptions);
+            const invoiceTime = new Date(order.orderDate).toLocaleTimeString(undefined, timeOptions);
+            const co          = companyDetails;
 
             billToPrintDiv.innerHTML = `
-                <div class="p-8 bg-white text-black" style="min-height: 297mm; width: 210mm; box-sizing: border-box; font-family: 'Inter', sans-serif; position: relative; color: #1f2937; background: #ffffff;">
-                    <!-- Header - Friendly Design -->
-                    <div style="border: 2px solid #e5e7eb; border-radius: 1rem; padding: 2rem; margin-bottom: 2rem; background: #f9fafb;">
-                        <h1 style="font-size: 1.75rem; font-weight: 700; color: #111827; text-align: center; margin: 0 0 1rem 0; letter-spacing: -0.02em;">
-                            ${companyDetails.companyName || 'QuickBill Pro'}
-                        </h1>
-                        <div style="text-align: center; color: #4b5563; font-size: 0.875rem; line-height: 1.8;">
-                            ${companyDetails.address ? `<p style="margin: 0.3rem 0; color: #4b5563;">${companyDetails.address}</p>` : ''}
-                            ${companyDetails.phone ? `<p style="margin: 0.3rem 0; color: #4b5563;">Phone: ${companyDetails.phone}</p>` : ''}
-                            ${companyDetails.email ? `<p style="margin: 0.3rem 0; color: #4b5563;">Email: ${companyDetails.email}</p>` : ''}
-                            ${companyDetails.gstNumber ? `<p style="margin: 0.3rem 0; color: #111827; font-weight: 600;">GSTIN: ${companyDetails.gstNumber}</p>` : ''}
-                        </div>
-                    </div>
+            <div style="width:210mm;min-height:297mm;box-sizing:border-box;background:#ffffff;font-family:'Inter',system-ui,sans-serif;color:#1e293b;font-size:13px;line-height:1.5;">
 
-                    <!-- Bill Info Section - Friendly Design -->
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 2rem; padding: 1.5rem; border: 2px solid #e5e7eb; border-radius: 1rem; background: #ffffff;">
-                        <div style="flex: 1;">
-                            <p style="font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; margin: 0 0 0.5rem 0; letter-spacing: 0.05em;">Bill To</p>
-                            <p style="font-size: 1.125rem; font-weight: 700; color: #111827; margin: 0;">${order.buyerName}</p>
-                        </div>
-                        <div style="text-align: right;">
-                            <p style="font-size: 0.8125rem; color: #4b5563; margin: 0.3rem 0;">Date: ${new Date(order.orderDate).toLocaleDateString(undefined, dateOptions)}</p>
-                            <p style="font-size: 0.8125rem; color: #4b5563; margin: 0.3rem 0;">Time: ${new Date(order.orderDate).toLocaleTimeString(undefined, timeOptions)}</p>
-                            <p style="font-size: 0.875rem; font-weight: 600; color: #111827; margin: 0.5rem 0 0 0;">Bill ID: #${order.id || 'N/A'}</p>
-                        </div>
-                    </div>
-
-                    <!-- Items Table - Friendly Design -->
-                    <table style="width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 2rem; border-radius: 0.75rem; overflow: hidden; border: 2px solid #e5e7eb;">
-                        <thead>
-                            <tr style="background: #f9fafb;">
-                                <th style="padding: 1rem; text-align: left; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Product</th>
-                                <th style="padding: 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Qty</th>
-                                <th style="padding: 1rem; text-align: center; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Price/Unit</th>
-                                <th style="padding: 1rem; text-align: right; font-size: 0.75rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e5e7eb;">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody style="background: #ffffff;">
-                            ${order.items.map((item, index) => `
-                                <tr style="${index < order.items.length - 1 ? 'border-bottom: 1px solid #e5e7eb;' : ''}">
-                                    <td style="padding: 1rem; font-size: 0.9rem; font-weight: 500; color: #111827;">${item.product}</td>
-                                    <td style="padding: 1rem; text-align: center; font-size: 0.9rem; color: #4b5563;">${item.quantity}</td>
-                                    <td style="padding: 1rem; text-align: center; font-size: 0.9rem; color: #4b5563;">₹${item.pricePerUnit.toFixed(2)}</td>
-                                    <td style="padding: 1rem; text-align: right; font-size: 0.9rem; font-weight: 600; color: #111827;">₹${item.total.toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-
-                    <!-- Grand Total Section - Friendly Design -->
-                    <div style="display: flex; justify-content: flex-end; margin-bottom: 2rem;">
-                        <div style="border: 2px solid #111827; border-radius: 0.75rem; padding: 1.25rem 2rem; background: #f9fafb;">
-                            <p style="font-size: 0.75rem; color: #6b7280; margin: 0 0 0.5rem 0; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Grand Total</p>
-                            <p style="font-size: 1.75rem; font-weight: 700; color: #111827; margin: 0;">₹${order.grandTotal.toFixed(2)}</p>
-                        </div>
-                    </div>
-
-                    ${billNotes ? `
-                        <div style="border: 2px solid #e5e7eb; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 2rem; background: #f9fafb;">
-                            <p style="font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; margin: 0 0 0.75rem 0; letter-spacing: 0.05em;">Notes</p>
-                            <p style="font-size: 0.875rem; color: #4b5563; margin: 0; line-height: 1.7;">${billNotes}</p>
-                        </div>
-                    ` : ''}
-
-                    <!-- Footer - Friendly -->
-                    <div style="position: absolute; bottom: 1rem; left: 0; right: 0; border-top: 2px solid #e5e7eb; padding-top: 1rem; text-align: center;">
-                        <p style="font-size: 0.75rem; color: #9ca3af; margin: 0;">Generated with QuickBill Pro</p>
-                    </div>
+              <!-- ── Top header bar ── -->
+              <div style="background:#0f172a;padding:28px 36px;display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                  <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.4px;margin-bottom:4px;">
+                    ${co.companyName || 'QuickBill Pro'}
+                  </div>
+                  ${co.address ? `<div style="color:#94a3b8;font-size:11.5px;margin-top:2px;">${co.address}</div>` : ''}
+                  ${co.phone   ? `<div style="color:#94a3b8;font-size:11.5px;">Tel: ${co.phone}</div>` : ''}
+                  ${co.email   ? `<div style="color:#94a3b8;font-size:11.5px;">${co.email}</div>` : ''}
+                  ${co.gstNumber ? `<div style="color:#cbd5e1;font-size:11.5px;font-weight:600;margin-top:4px;">GSTIN: ${co.gstNumber}</div>` : ''}
                 </div>
-            `;
-            billToPrintDiv.classList.add('visible-for-capture');
+                <div style="text-align:right;">
+                  <div style="font-size:28px;font-weight:900;color:#ffffff;letter-spacing:2px;text-transform:uppercase;">Invoice</div>
+                  <div style="color:#94a3b8;font-size:11.5px;margin-top:6px;">#${invoiceNo}</div>
+                </div>
+              </div>
 
+              <!-- ── Invoice meta row ── -->
+              <div style="display:flex;border-bottom:1px solid #e2e8f0;">
+                <!-- Bill To -->
+                <div style="flex:1;padding:20px 36px;border-right:1px solid #e2e8f0;">
+                  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;margin-bottom:6px;">Bill To</div>
+                  <div style="font-size:15px;font-weight:700;color:#0f172a;">${order.buyerName}</div>
+                </div>
+                <!-- Invoice details -->
+                <div style="padding:20px 36px;min-width:200px;">
+                  <table style="border:none;border-collapse:collapse;width:100%;font-size:12px;">
+                    <tr>
+                      <td style="color:#64748b;padding:2px 0;padding-right:16px;white-space:nowrap;">Invoice Date</td>
+                      <td style="color:#0f172a;font-weight:600;text-align:right;">${invoiceDate}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:#64748b;padding:2px 0;padding-right:16px;white-space:nowrap;">Time</td>
+                      <td style="color:#0f172a;font-weight:600;text-align:right;">${invoiceTime}</td>
+                    </tr>
+                    <tr>
+                      <td style="color:#64748b;padding:2px 0;padding-right:16px;white-space:nowrap;">Invoice No.</td>
+                      <td style="color:#0f172a;font-weight:700;text-align:right;">#${invoiceNo}</td>
+                    </tr>
+                    ${co.gstNumber ? `
+                    <tr>
+                      <td style="color:#64748b;padding:2px 0;padding-right:16px;white-space:nowrap;">GSTIN</td>
+                      <td style="color:#0f172a;font-weight:600;text-align:right;">${co.gstNumber}</td>
+                    </tr>` : ''}
+                  </table>
+                </div>
+              </div>
+
+              <!-- ── Items table ── -->
+              <div style="padding:0 36px;">
+                <table style="width:100%;border-collapse:collapse;margin-top:24px;">
+                  <thead>
+                    <tr style="background:#0f172a;">
+                      <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.08em;border-radius:0;">#</th>
+                      <th style="padding:11px 14px;text-align:left;font-size:10px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.08em;">Item / Description</th>
+                      <th style="padding:11px 14px;text-align:center;font-size:10px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.08em;">Qty</th>
+                      <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.08em;">Unit Price</th>
+                      <th style="padding:11px 14px;text-align:right;font-size:10px;font-weight:700;color:#e2e8f0;text-transform:uppercase;letter-spacing:0.08em;">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${order.items.map((item, i) => `
+                      <tr style="background:${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                        <td style="padding:11px 14px;color:#94a3b8;font-size:12px;border-bottom:1px solid #f1f5f9;">${i + 1}</td>
+                        <td style="padding:11px 14px;font-weight:500;color:#0f172a;font-size:13px;border-bottom:1px solid #f1f5f9;">${item.product}</td>
+                        <td style="padding:11px 14px;text-align:center;color:#475569;font-size:13px;border-bottom:1px solid #f1f5f9;">${item.quantity}</td>
+                        <td style="padding:11px 14px;text-align:right;color:#475569;font-size:13px;border-bottom:1px solid #f1f5f9;">₹${item.pricePerUnit.toFixed(2)}</td>
+                        <td style="padding:11px 14px;text-align:right;font-weight:600;color:#0f172a;font-size:13px;border-bottom:1px solid #f1f5f9;">₹${item.total.toFixed(2)}</td>
+                      </tr>`).join('')}
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- ── Totals ── -->
+              <div style="display:flex;justify-content:flex-end;padding:0 36px;margin-top:8px;">
+                <table style="border-collapse:collapse;min-width:240px;font-size:13px;">
+                  <tr>
+                    <td style="padding:6px 14px 6px 0;color:#64748b;text-align:right;">Subtotal</td>
+                    <td style="padding:6px 0 6px 24px;text-align:right;color:#0f172a;font-weight:500;">₹${order.grandTotal.toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" style="padding:4px 0;">
+                      <div style="border-top:1px solid #e2e8f0;margin:4px 0;"></div>
+                    </td>
+                  </tr>
+                  <tr style="background:#0f172a;">
+                    <td style="padding:12px 14px 12px 16px;color:#e2e8f0;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;text-align:right;border-radius:4px 0 0 4px;">Total Due</td>
+                    <td style="padding:12px 16px 12px 24px;text-align:right;color:#ffffff;font-weight:800;font-size:17px;border-radius:0 4px 4px 0;">₹${order.grandTotal.toFixed(2)}</td>
+                  </tr>
+                </table>
+              </div>
+
+              ${billNotes ? `
+              <!-- ── Notes ── -->
+              <div style="margin:24px 36px 0;padding:16px 20px;background:#f8fafc;border-left:3px solid #0f172a;border-radius:0 6px 6px 0;">
+                <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;margin-bottom:6px;">Notes</div>
+                <div style="color:#374151;font-size:12.5px;line-height:1.7;">${billNotes}</div>
+              </div>` : ''}
+
+              <!-- ── Footer ── -->
+              <div style="margin:32px 36px 0;padding-top:16px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:11px;color:#94a3b8;">
+                  ${co.companyName ? `<strong style="color:#475569;">${co.companyName}</strong>${co.phone ? ` &nbsp;·&nbsp; ${co.phone}` : ''}${co.email ? ` &nbsp;·&nbsp; ${co.email}` : ''}` : ''}
+                </div>
+                <div style="font-size:11px;color:#cbd5e1;">Generated with QuickBill Pro</div>
+              </div>
+              <div style="text-align:center;padding:18px 36px 28px;font-size:12px;color:#64748b;font-style:italic;">
+                Thank you for your business!
+              </div>
+
+            </div>
+            `;
+
+            if (format === 'print') {
+                // Use browser native print — no html2canvas needed
+                window.addEventListener('afterprint', () => {
+                    billToPrintDiv.innerHTML = '';
+                }, { once: true });
+                window.print();
+                return;
+            }
+
+            // PNG download via html2canvas
+            billToPrintDiv.classList.add('visible-for-capture');
             setTimeout(async () => {
                 try {
                     const canvas = await window.html2canvas(billToPrintDiv.firstElementChild, {
@@ -4417,22 +4547,17 @@
                         useCORS: true,
                         logging: false,
                     });
-
-                    if (format === 'photo') {
-                        const imgData = canvas.toDataURL('image/png');
-                        const link = document.createElement('a');
-                        link.href = imgData;
-                        link.download = `${order.buyerName}_Bill_${new Date(order.orderDate).toLocaleDateString().replace(/\//g, '-')}.png`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        showToast("Bill exported as photo!");
-                    } else {
-                        showToast("Only photo export is supported.");
-                    }
+                    const imgData = canvas.toDataURL('image/png');
+                    const link = document.createElement('a');
+                    link.href = imgData;
+                    link.download = `${order.buyerName}_Bill_${new Date(order.orderDate).toLocaleDateString().replace(/\//g, '-')}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showToast("✅ Bill downloaded!");
                 } catch (error) {
                     console.error("Error generating bill:", error);
-                    showToast("Failed to generate bill. Please try again.");
+                    showToast("❌ Failed to generate bill. Please try again.");
                 } finally {
                     billToPrintDiv.classList.remove('visible-for-capture');
                     billToPrintDiv.innerHTML = '';
@@ -5112,13 +5237,17 @@
 
                                 const isSetupComplete = localStorage.getItem('quickbill-setup-complete');
                                 const connMode = localStorage.getItem('quickbill-connection-mode') || 'online';
-                                const sessionExpired = window.firebaseUser && window.firebaseUser.isAnonymous;
+                                // Welcome-back only when setup is done, mode is online, AND the user
+                                // has NO real Firebase account (uid starts with anonymous prefix or
+                                // firebaseUser.isAnonymous — meaning the named account session is gone)
+                                const hasNamedAccount = window.firebaseUser && !window.firebaseUser.isAnonymous;
+                                const shouldShowWelcomeBack = connMode === 'online' && !hasNamedAccount;
 
                                 if (!isSetupComplete) {
                                     // First-time user → onboarding
                                     showOnboarding();
-                                } else if (connMode === 'online' && sessionExpired) {
-                                    // Returning online user whose Firebase session lapsed → welcome-back
+                                } else if (shouldShowWelcomeBack) {
+                                    // Returning online user — no active named account → welcome-back
                                     const wb = document.getElementById('welcome-back-overlay');
                                     if (wb) { wb.style.display = 'flex'; }
                                 } else {
@@ -5188,6 +5317,17 @@
 
         let _obSelectedIndustry = 'general';
 
+        /** Strip Firebase noise from error messages */
+        function cleanFirebaseError(msg) {
+            return (msg || '').replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '').trim();
+        }
+
+        /** True when auto-sync should run */
+        function shouldAutoSync() {
+            return localStorage.getItem('quickbill-connection-mode') !== 'offline' &&
+                   typeof window.scheduleAutoSync === 'function';
+        }
+
         function showOnboarding() {
             const overlay = document.getElementById('onboarding-overlay');
             if (overlay) overlay.classList.remove('hidden');
@@ -5216,7 +5356,7 @@
             if (result.success) {
                 obGoStep(3);
             } else {
-                err.textContent = result.error.replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '');
+                err.textContent = cleanFirebaseError(result.error);
                 err.classList.remove('hidden');
             }
         }
@@ -5236,7 +5376,7 @@
             if (result.success) {
                 obGoStep(3);
             } else {
-                err.textContent = result.error.replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '');
+                err.textContent = cleanFirebaseError(result.error);
                 err.classList.remove('hidden');
             }
         }
@@ -5261,7 +5401,7 @@
             if (result.success) {
                 obGoStep(3);
             } else {
-                err.textContent = result.error.replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '');
+                err.textContent = cleanFirebaseError(result.error);
                 err.classList.remove('hidden');
             }
         }
@@ -5282,10 +5422,10 @@
 
         // Called after Step 3 — go to install step if prompt is available, else finish
         function obComplete() {
-            // Persist company details entered in onboarding
+            // Persist company details entered in onboarding into the global companyDetails
             const name  = document.getElementById('ob-company-name')?.value.trim() || '';
             const phone = document.getElementById('ob-phone')?.value.trim() || '';
-            if (name)  companyDetails.companyName = name;
+            if (name)  companyDetails.companyName = name;   // companyDetails is the app-global object
             if (phone) companyDetails.phone       = phone;
             companyDetails.industryMode = _obSelectedIndustry;
             saveDataToLocalStorage('companyDetails', companyDetails);
@@ -5304,6 +5444,9 @@
             prompt.prompt();
             const { outcome } = await prompt.userChoice;
             window._deferredInstallPrompt = null;
+            if (outcome === 'accepted') {
+                showToast('✅ App installed!');
+            }
             obFinish();
         }
 
@@ -5357,7 +5500,7 @@
                 location.reload();
             } else {
                 const err = document.getElementById('wb-auth-error');
-                err.textContent = result.error.replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '');
+                err.textContent = cleanFirebaseError(result.error);
                 err.classList.remove('hidden');
             }
         }
@@ -5376,7 +5519,7 @@
             if (result.success) {
                 location.reload();
             } else {
-                err.textContent = result.error.replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '');
+                err.textContent = cleanFirebaseError(result.error);
                 err.classList.remove('hidden');
             }
         }
@@ -5394,9 +5537,8 @@
         // ═══════════════════════════════════════════════════════════
 
         window.addEventListener('online', () => {
-            if (localStorage.getItem('quickbill-connection-mode') !== 'offline' &&
-                window.firebaseUser && !window.firebaseUser.isAnonymous &&
-                typeof window.scheduleAutoSync === 'function') {
+            if (shouldAutoSync() &&
+                window.firebaseUser && !window.firebaseUser.isAnonymous) {
                 showToast('✅ Back online — syncing…');
                 window.scheduleAutoSync();
             }
