@@ -1553,16 +1553,31 @@
                     <div class="flex-1 h-px" style="background:var(--border-color);"></div>
                 </div>
                 <!-- Email / password — autocomplete enabled for password managers -->
-                <form id="ob-auth-form" onsubmit="return false;" autocomplete="on" class="space-y-3">
+                <form id="ob-auth-form" onsubmit="obHandleSignIn(event)" autocomplete="on" class="space-y-3">
                     <input type="email" id="ob-email" name="email" autocomplete="email" placeholder="Email address"
                         class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
                         style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
                     <input type="password" id="ob-password" name="password" autocomplete="current-password" placeholder="Password"
                         class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                        style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
+                        style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);"
+                        oninput="updateObPasswordRequirements(this.value)">
+                    <div id="ob-password-requirements" class="hidden p-3 rounded-xl border text-xs space-y-1" style="background-color: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3);">
+                        <p class="font-bold" style="color: var(--text-primary);">Password Requirements:</p>
+                        <ul class="list-disc list-inside space-y-0.5" style="color: var(--text-secondary);">
+                            <li id="ob-req-length">At least 6 characters</li>
+                            <li id="ob-req-letter">Contains a letter</li>
+                            <li id="ob-req-number">Contains a number</li>
+                        </ul>
+                    </div>
+                    <!-- Email verification pending notice -->
+                    <div id="ob-verification-notice" class="hidden p-3 rounded-xl border text-xs space-y-2" style="background-color: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.4);">
+                        <p class="font-bold" style="color: var(--text-primary);">📧 Check your inbox!</p>
+                        <p style="color: var(--text-secondary);">A verification link was sent to <strong id="ob-verify-email-display"></strong>. Click it to activate your account, then sign in here.</p>
+                        <button type="button" onclick="obResendVerification()" class="font-medium hover:underline" style="color: #2563eb;">Resend verification email</button>
+                    </div>
                     <p id="ob-auth-error" class="text-xs text-red-500 hidden"></p>
                     <div class="flex gap-2">
-                        <button type="button" onclick="obHandleSignIn()" class="flex-1 bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
+                        <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
                         <button type="button" onclick="obHandleSignUp()" class="flex-1 py-3 rounded-2xl font-bold text-sm transition-colors" style="background:var(--bg-tertiary); color:var(--text-primary);">Sign Up</button>
                     </div>
                     <button type="button" onclick="obToggleForgotPassword()" class="text-xs text-blue-600 hover:underline font-medium">Forgot Password?</button>
@@ -1660,7 +1675,7 @@
                 </svg>
                 Sign in with Google
             </button>
-            <form onsubmit="return false;" autocomplete="on" class="space-y-3">
+            <form onsubmit="wbHandleSignIn(event)" autocomplete="on" class="space-y-3">
                 <input type="email" id="wb-email" name="email" autocomplete="email" placeholder="Email"
                     class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
@@ -1668,7 +1683,7 @@
                     class="w-full px-4 py-3 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     style="background:var(--input-bg); border:1px solid var(--border-color); color:var(--text-primary);">
                 <p id="wb-auth-error" class="text-xs text-red-500 hidden"></p>
-                <button type="button" onclick="wbHandleSignIn()" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
                 <button type="button" onclick="wbToggleForgotPassword()" class="text-xs text-blue-600 hover:underline font-medium">Forgot Password?</button>
                 <div id="wb-forgot-password-form" class="hidden p-4 rounded-2xl border space-y-3" style="background-color: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3);">
                     <p class="text-xs font-bold" style="color: var(--text-primary);">Reset Your Password</p>
@@ -2105,9 +2120,9 @@
                         </div>
                         
                         <!-- Email Sign In Form -->
-                        <div id="email-signin-form" class="space-y-3">
-                            <input type="email" id="auth-email" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
-                            <input type="password" id="auth-password" placeholder="Password" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
+                        <form id="email-signin-form" onsubmit="handleEmailSignIn(event)" autocomplete="on" class="space-y-3">
+                            <input type="email" id="auth-email" name="email" autocomplete="username" placeholder="Email" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
+                            <input type="password" id="auth-password" name="password" autocomplete="current-password" placeholder="Password" class="w-full p-4 bg-gray-50 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" style="background-color: var(--input-bg); color: var(--text-primary);">
                             <div id="password-requirements" class="hidden p-3 bg-blue-50 rounded-xl border border-blue-200 text-xs space-y-1" style="background-color: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3);">
                                 <p class="font-bold" style="color: var(--text-primary);">Password Requirements:</p>
                                 <ul class="list-disc list-inside space-y-0.5" style="color: var(--text-secondary);">
@@ -2127,10 +2142,15 @@
                                 </div>
                             </div>
                             <div class="flex gap-3">
-                                <button onclick="handleEmailSignIn()" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
-                                <button onclick="handleEmailSignUp()" class="flex-1 bg-gray-100 py-4 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-colors" style="background-color: var(--bg-tertiary); color: var(--text-primary);">Sign Up</button>
+                                <button type="submit" class="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold text-sm hover:bg-blue-700 transition-colors">Sign In</button>
+                                <button type="button" onclick="handleEmailSignUp()" class="flex-1 bg-gray-100 py-4 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-colors" style="background-color: var(--bg-tertiary); color: var(--text-primary);">Sign Up</button>
                             </div>
-                        </div>
+                            <div id="resend-verification-section" class="hidden p-3 rounded-xl border text-xs space-y-2" style="background-color: rgba(251, 191, 36, 0.1); border-color: rgba(251, 191, 36, 0.4);">
+                                <p class="font-bold" style="color: var(--text-primary);">📧 Email not yet verified</p>
+                                <p style="color: var(--text-secondary);">Check your inbox for the verification link, or click below to resend it.</p>
+                                <button type="button" onclick="handleResendVerification()" class="font-medium hover:underline" style="color: #2563eb;">Resend verification email</button>
+                            </div>
+                        </form>
                         
                         <div class="relative">
                             <div class="absolute inset-0 flex items-center">
@@ -2212,6 +2232,7 @@
             signInWithPopup,
             GoogleAuthProvider,
             sendPasswordResetEmail,
+            sendEmailVerification,
             signOut,
             onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -2242,6 +2263,10 @@
         window.firebaseSignInWithEmail = async (email, password) => {
             try {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                if (!userCredential.user.emailVerified) {
+                    await signOut(auth);
+                    return { success: false, error: 'email-not-verified' };
+                }
                 return { success: true, user: userCredential.user };
             } catch (error) {
                 return { success: false, error: error.message };
@@ -2251,7 +2276,9 @@
         window.firebaseSignUpWithEmail = async (email, password) => {
             try {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                return { success: true, user: userCredential.user };
+                await sendEmailVerification(userCredential.user);
+                await signOut(auth);
+                return { success: true, emailVerificationSent: true };
             } catch (error) {
                 return { success: false, error: error.message };
             }
@@ -2279,6 +2306,20 @@
         window.firebaseResetPassword = async (email) => {
             try {
                 await sendPasswordResetEmail(auth, email);
+                return { success: true };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        };
+
+        window.firebaseResendVerificationEmail = async (email, password) => {
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                if (userCredential.user.emailVerified) {
+                    return { success: true, alreadyVerified: true };
+                }
+                await sendEmailVerification(userCredential.user);
+                await signOut(auth);
                 return { success: true };
             } catch (error) {
                 return { success: false, error: error.message };
@@ -2367,9 +2408,9 @@
                     window.updateAuthUI(user);
                 }
 
-                // Auto-load cloud data whenever a non-anonymous user signs in
-                if (!user.isAnonymous && typeof window.loadDataFromFirestore === 'function') {
-                    // Remember that this browser has had a named account (used for welcome-back)
+                // Auto-load cloud data whenever a verified, non-anonymous user signs in
+                if (!user.isAnonymous && user.emailVerified && typeof window.loadDataFromFirestore === 'function') {
+                    // Remember that this browser has had a verified named account (used for welcome-back)
                     localStorage.setItem('quickbill-had-named-account', '1');
                     try {
                         const result = await window.loadDataFromFirestore(user.uid);
@@ -4965,7 +5006,8 @@
         
         window.switchAuthTab = switchAuthTab;
 
-        async function handleEmailSignIn() {
+        async function handleEmailSignIn(event) {
+            if (event) event.preventDefault();
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
             
@@ -4973,7 +5015,13 @@
                 showToast('Please enter email and password');
                 return;
             }
-            
+
+            if (!isValidEmailDomain(email)) {
+                showToast('❌ Please enter a valid email address');
+                return;
+            }
+
+            document.getElementById('resend-verification-section')?.classList.add('hidden');
             showToast('Signing in...');
             const result = await window.firebaseSignInWithEmail(email, password);
             
@@ -4982,10 +5030,14 @@
                 document.getElementById('auth-email').value = '';
                 document.getElementById('auth-password').value = '';
                 document.getElementById('password-requirements')?.classList.add('hidden');
+                document.getElementById('resend-verification-section')?.classList.add('hidden');
             } else {
-                if (result.error.includes('user-not-found')) {
+                if (result.error === 'email-not-verified') {
+                    showToast('❌ Please verify your email first. Check your inbox.');
+                    document.getElementById('resend-verification-section')?.classList.remove('hidden');
+                } else if (result.error.includes('user-not-found')) {
                     showToast('❌ No account found with this email. Try signing up first.');
-                } else if (result.error.includes('wrong-password')) {
+                } else if (result.error.includes('wrong-password') || result.error.includes('invalid-credential')) {
                     showToast('❌ Incorrect password. Try again or use "Forgot Password".');
                 } else if (result.error.includes('invalid-email')) {
                     showToast('❌ Invalid email address format');
@@ -5009,6 +5061,11 @@
                 showToast('Please enter email and password');
                 return;
             }
+
+            if (!isValidEmailDomain(email)) {
+                showToast('❌ Please enter a valid email address with a real domain');
+                return;
+            }
             
             // Validate password requirements
             const requirements = validatePassword(password);
@@ -5029,13 +5086,25 @@
             }
             
             showToast('Creating account...');
+            // Hint password managers that this is a new password
+            const authPwField = document.getElementById('auth-password');
+            if (authPwField) authPwField.setAttribute('autocomplete', 'new-password');
             const result = await window.firebaseSignUpWithEmail(email, password);
+            if (authPwField) authPwField.setAttribute('autocomplete', 'current-password');
             
             if (result.success) {
-                showToast('✅ Account created successfully!');
+                // Offer to save credentials via Credential Management API (Chrome/Edge/Opera)
+                if (window.PasswordCredential) {
+                    try {
+                        const cred = new window.PasswordCredential({ id: email, password });
+                        await navigator.credentials.store(cred);
+                    } catch (credErr) { console.debug('PasswordCredential store failed:', credErr); }
+                }
+                showToast('✅ Account created! Check your email for a verification link before signing in.');
                 document.getElementById('auth-email').value = '';
                 document.getElementById('auth-password').value = '';
                 document.getElementById('password-requirements')?.classList.add('hidden');
+                document.getElementById('resend-verification-section')?.classList.add('hidden');
             } else {
                 if (result.error.includes('email-already-in-use')) {
                     showToast('❌ This email is already registered. Try signing in or resetting your password.');
@@ -5103,6 +5172,29 @@
 
         window.handlePasswordReset = handlePasswordReset;
 
+        async function handleResendVerification() {
+            const email    = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) {
+                showToast('Enter your email and password above to resend the verification link');
+                return;
+            }
+            showToast('Sending verification email...');
+            const result = await window.firebaseResendVerificationEmail(email, password);
+            if (result.success) {
+                if (result.alreadyVerified) {
+                    showToast('✅ Email already verified — try signing in again!');
+                    document.getElementById('resend-verification-section')?.classList.add('hidden');
+                } else {
+                    showToast('✅ Verification email resent! Check your inbox.');
+                }
+            } else {
+                showToast('❌ Could not resend: ' + cleanFirebaseError(result.error));
+            }
+        }
+
+        window.handleResendVerification = handleResendVerification;
+
         function obToggleForgotPassword() {
             toggleResetForm('ob-forgot-password-form', 'ob-reset-email');
         }
@@ -5168,6 +5260,34 @@
         }
 
         window.updatePasswordRequirements = updatePasswordRequirements;
+
+        function updateObPasswordRequirements(password) {
+            const reqDiv = document.getElementById('ob-password-requirements');
+            if (!reqDiv) return;
+            if (password.length > 0) {
+                reqDiv.classList.remove('hidden');
+                const requirements = validatePassword(password);
+                const lengthEl = document.getElementById('ob-req-length');
+                const letterEl = document.getElementById('ob-req-letter');
+                const numberEl = document.getElementById('ob-req-number');
+                if (lengthEl) {
+                    lengthEl.style.color = requirements.length ? '#10b981' : 'var(--text-secondary)';
+                    lengthEl.innerHTML   = requirements.length ? '✅ At least 6 characters' : 'At least 6 characters';
+                }
+                if (letterEl) {
+                    letterEl.style.color = requirements.letter ? '#10b981' : 'var(--text-secondary)';
+                    letterEl.innerHTML   = requirements.letter ? '✅ Contains a letter' : 'Contains a letter';
+                }
+                if (numberEl) {
+                    numberEl.style.color = requirements.number ? '#10b981' : 'var(--text-secondary)';
+                    numberEl.innerHTML   = requirements.number ? '✅ Contains a number' : 'Contains a number';
+                }
+            } else {
+                reqDiv.classList.add('hidden');
+            }
+        }
+
+        window.updateObPasswordRequirements = updateObPasswordRequirements;
 
         // Add event listener to password field
         document.addEventListener('DOMContentLoaded', () => {
@@ -5702,6 +5822,35 @@
             return (msg || '').replace('Firebase: ', '').replace(/\s*\(auth[^)]*\)\.?/g, '').trim();
         }
 
+        /**
+         * Returns true when the email address has a plausible, non-gibberish domain.
+         * Checks strict format, TLD validity, and keyboard-pattern / no-vowel heuristics.
+         */
+        function isValidEmailDomain(email) {
+            if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email)) return false;
+            const domain = email.split('@')[1].toLowerCase(); // normalise before all checks
+            const parts  = domain.split('.');
+            if (parts.length < 2) return false;
+            const tld        = parts[parts.length - 1];
+            const domainName = parts.slice(0, -1).join('');
+            // TLD must be 2-24 lowercase letters (domain is already lowercased above)
+            if (!/^[a-z]{2,24}$/.test(tld)) return false;
+            // Domain name must be at least 2 characters
+            if (domainName.length < 2) return false;
+            const letters = domainName.replace(/[^a-z]/g, '');
+            // Block keyboard-row patterns of 5+ consecutive keys (e.g. qwerty, asdfgh, zxcvbn)
+            const keyboardRows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'];
+            for (const row of keyboardRows) {
+                for (let i = 0; i <= row.length - 5; i++) { // 5 = min run length to flag as gibberish
+                    if (letters.includes(row.substring(i, i + 5))) return false;
+                }
+            }
+            // Domains with 8+ letters must contain at least one vowel (pure consonant strings like
+            // 'rstlnbcd' are almost certainly random keyboard mashing)
+            if (letters.length >= 8 && !/[aeiou]/.test(letters)) return false;
+            return true;
+        }
+
         /** True when auto-sync should run */
         function shouldAutoSync() {
             return localStorage.getItem('quickbill-connection-mode') !== 'offline' &&
@@ -5741,13 +5890,20 @@
             }
         }
 
-        async function obHandleSignIn() {
+        async function obHandleSignIn(event) {
+            if (event) event.preventDefault();
             const email    = document.getElementById('ob-email').value.trim();
             const password = document.getElementById('ob-password').value;
             const err      = document.getElementById('ob-auth-error');
             err.classList.add('hidden');
+            document.getElementById('ob-verification-notice')?.classList.add('hidden');
             if (!email || !password) {
                 err.textContent = 'Please enter your email and password.';
+                err.classList.remove('hidden');
+                return;
+            }
+            if (!isValidEmailDomain(email)) {
+                err.textContent = 'Please enter a valid email address.';
                 err.classList.remove('hidden');
                 return;
             }
@@ -5755,6 +5911,13 @@
             const result = await window.firebaseSignInWithEmail(email, password);
             if (result.success) {
                 obGoStep(3);
+            } else if (result.error === 'email-not-verified') {
+                const notice = document.getElementById('ob-verification-notice');
+                const display = document.getElementById('ob-verify-email-display');
+                if (display) display.textContent = email;
+                if (notice) notice.classList.remove('hidden');
+                err.textContent = 'Please verify your email before signing in.';
+                err.classList.remove('hidden');
             } else {
                 err.textContent = cleanFirebaseError(result.error);
                 err.classList.remove('hidden');
@@ -5766,25 +5929,84 @@
             const password = document.getElementById('ob-password').value;
             const err      = document.getElementById('ob-auth-error');
             err.classList.add('hidden');
+            document.getElementById('ob-verification-notice')?.classList.add('hidden');
             if (!email || !password) {
                 err.textContent = 'Please enter your email and password.';
                 err.classList.remove('hidden');
                 return;
             }
-            if (password.length < 6) {
+            if (!isValidEmailDomain(email)) {
+                err.textContent = 'Please enter a valid email address with a real domain.';
+                err.classList.remove('hidden');
+                return;
+            }
+            const req = validatePassword(password);
+            if (!req.length) {
                 err.textContent = 'Password must be at least 6 characters.';
                 err.classList.remove('hidden');
                 return;
             }
+            if (!req.letter) {
+                err.textContent = 'Password must contain at least one letter.';
+                err.classList.remove('hidden');
+                return;
+            }
+            if (!req.number) {
+                err.textContent = 'Password must contain at least one number.';
+                err.classList.remove('hidden');
+                return;
+            }
+            // Hint password managers to save as a new credential
+            const pwField = document.getElementById('ob-password');
+            if (pwField) pwField.setAttribute('autocomplete', 'new-password');
             if (!window.firebaseSignUpWithEmail) { obGoStep(3); return; }
             const result = await window.firebaseSignUpWithEmail(email, password);
+            if (pwField) pwField.setAttribute('autocomplete', 'current-password');
             if (result.success) {
-                obGoStep(3);
+                // Use Credential Management API to save credentials on supporting browsers
+                if (window.PasswordCredential) {
+                    try {
+                        const cred = new window.PasswordCredential({ id: email, password });
+                        await navigator.credentials.store(cred);
+                    } catch (credErr) { console.debug('PasswordCredential store failed:', credErr); }
+                }
+                const display = document.getElementById('ob-verify-email-display');
+                if (display) display.textContent = email;
+                document.getElementById('ob-verification-notice')?.classList.remove('hidden');
+                err.classList.add('hidden');
             } else {
                 err.textContent = cleanFirebaseError(result.error);
                 err.classList.remove('hidden');
             }
         }
+
+        async function obResendVerification() {
+            const email    = document.getElementById('ob-email').value.trim();
+            const password = document.getElementById('ob-password').value;
+            const err      = document.getElementById('ob-auth-error');
+            if (!email || !password) {
+                err.textContent = 'Enter your email and password above, then click Resend.';
+                err.classList.remove('hidden');
+                return;
+            }
+            const result = await window.firebaseResendVerificationEmail(email, password);
+            if (result.success) {
+                if (result.alreadyVerified) {
+                    document.getElementById('ob-verification-notice')?.classList.add('hidden');
+                    err.textContent = 'Email already verified — sign in now!';
+                    err.classList.remove('hidden');
+                } else {
+                    err.textContent = '✅ Verification email resent! Check your inbox.';
+                    err.style.color = '#10b981';
+                    err.classList.remove('hidden');
+                }
+            } else {
+                err.textContent = cleanFirebaseError(result.error);
+                err.classList.remove('hidden');
+            }
+        }
+
+        window.obResendVerification = obResendVerification;
 
         function obSetIndustry(mode) {
             _obSelectedIndustry = mode;
@@ -5891,7 +6113,8 @@
             }
         }
 
-        async function wbHandleSignIn() {
+        async function wbHandleSignIn(event) {
+            if (event) event.preventDefault();
             const email    = document.getElementById('wb-email').value.trim();
             const password = document.getElementById('wb-password').value;
             const err      = document.getElementById('wb-auth-error');
@@ -5901,9 +6124,17 @@
                 err.classList.remove('hidden');
                 return;
             }
+            if (!isValidEmailDomain(email)) {
+                err.textContent = 'Please enter a valid email address.';
+                err.classList.remove('hidden');
+                return;
+            }
             const result = await window.firebaseSignInWithEmail(email, password);
             if (result.success) {
                 location.reload();
+            } else if (result.error === 'email-not-verified') {
+                err.textContent = 'Please verify your email first. Check your inbox for the verification link.';
+                err.classList.remove('hidden');
             } else {
                 err.textContent = cleanFirebaseError(result.error);
                 err.classList.remove('hidden');
