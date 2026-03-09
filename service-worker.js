@@ -17,6 +17,9 @@ const BASE_PATH = getBasePath();
 const localAssets = [
     `${BASE_PATH}`,
     `${BASE_PATH}index.html`,
+    `${BASE_PATH}styles.css`,
+    `${BASE_PATH}app.js`,
+    `${BASE_PATH}firebase.js`,
     `${BASE_PATH}manifest.json`,
     `${BASE_PATH}icons/icon-192x192.png`,
     `${BASE_PATH}icons/icon-512x512.png`
