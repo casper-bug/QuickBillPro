@@ -230,9 +230,9 @@ function setupRealtimeSync(firebaseUid) {
         if (typeof window.showToast === 'function') {
             window.showToast('🔄 Data synced from another device!');
         }
-        // Delay matches the toast display duration so the user can read the message
-        // before the page refreshes to render the updated data.
-        setTimeout(() => location.reload(), 1500);
+        if (typeof window.refreshAppData === 'function') {
+            window.refreshAppData();
+        }
     }, (error) => {
         console.warn('Real-time sync listener error:', error);
     });
