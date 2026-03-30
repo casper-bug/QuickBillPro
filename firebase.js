@@ -19,6 +19,7 @@ import {
     doc,
     getDoc,
     setDoc,
+    onSnapshot,
     collection
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -113,12 +114,16 @@ window.syncDataToFirestore = async (firebaseUid) => {
         // the Firebase-timeout fallback case.
         const localId = window.quickbillLocalUserId || firebaseUid;
         const userDoc = doc(db, 'users', firebaseUid);
+        const lastSync = new Date().toISOString();
+        // Record the timestamp before writing so the onSnapshot listener can
+        // recognise this as our own write and skip applying it as a remote change.
+        _ownSyncTimestamp = lastSync;
         const data = {
             orders: localStorage.getItem(`quickbill-${localId}-orders`) || '[]',
             stock: localStorage.getItem(`quickbill-${localId}-stock`) || '[]',
             notes: localStorage.getItem(`quickbill-${localId}-notes`) || '[]',
             companyDetails: localStorage.getItem(`quickbill-${localId}-companyDetails`) || '{}',
-            lastSync: new Date().toISOString()
+            lastSync: lastSync
         };
 
         await setDoc(userDoc, data);
@@ -148,6 +153,13 @@ window.loadDataFromFirestore = async (userId) => {
     }
 };
 
+// Track the lastSync timestamp we most recently wrote so onSnapshot can
+// distinguish our own writes from changes made on another device.
+let _ownSyncTimestamp = null;
+
+// Holds the unsubscribe function for the real-time Firestore listener.
+let _realtimeSyncUnsubscribe = null;
+
 // Debounced auto-sync: triggered after every local data change
 let autoSyncTimer = null;
 window.scheduleAutoSync = () => {
@@ -171,6 +183,60 @@ window.scheduleAutoSync = () => {
         }
     }, 3000);
 };
+
+// Sets up a real-time Firestore listener so changes pushed by another device
+// are automatically applied on this device without any manual button press.
+function setupRealtimeSync(firebaseUid) {
+    // Cancel any existing listener first.
+    if (_realtimeSyncUnsubscribe) {
+        _realtimeSyncUnsubscribe();
+        _realtimeSyncUnsubscribe = null;
+    }
+
+    const userDoc = doc(db, 'users', firebaseUid);
+    let isFirstSnapshot = true;
+
+    _realtimeSyncUnsubscribe = onSnapshot(userDoc, (docSnap) => {
+        if (isFirstSnapshot) {
+            // The first snapshot is always the current state on load — use it to
+            // initialise our baseline so we do not treat it as a remote change.
+            isFirstSnapshot = false;
+            if (docSnap.exists()) {
+                _ownSyncTimestamp = docSnap.data().lastSync || null;
+            }
+            return;
+        }
+
+        if (!docSnap.exists()) return;
+        const data = docSnap.data();
+
+        // If this update was written by this device, ignore it.
+        if (!data.lastSync || data.lastSync === _ownSyncTimestamp) return;
+
+        // A different device wrote newer data — apply it locally and refresh.
+        console.log('Real-time sync: remote change detected, applying...');
+        const localId = window.quickbillLocalUserId || firebaseUid;
+        if (data.orders) localStorage.setItem(`quickbill-${localId}-orders`, data.orders);
+        if (data.stock) localStorage.setItem(`quickbill-${localId}-stock`, data.stock);
+        if (data.notes) localStorage.setItem(`quickbill-${localId}-notes`, data.notes);
+        if (data.companyDetails) localStorage.setItem(`quickbill-${localId}-companyDetails`, data.companyDetails);
+
+        // Update our baseline so a rapid second snapshot does not re-trigger.
+        _ownSyncTimestamp = data.lastSync;
+
+        const lastSyncEl = document.getElementById('auth-last-sync');
+        if (lastSyncEl) lastSyncEl.textContent = 'Last synced: Just now';
+
+        if (typeof window.showToast === 'function') {
+            window.showToast('🔄 Data synced from another device!');
+        }
+        // Delay matches the toast display duration so the user can read the message
+        // before the page refreshes to render the updated data.
+        setTimeout(() => location.reload(), 1500);
+    }, (error) => {
+        console.warn('Real-time sync listener error:', error);
+    });
+}
 
 // Firebase Authentication
 onAuthStateChanged(auth, async (user) => {
@@ -204,6 +270,8 @@ onAuthStateChanged(auth, async (user) => {
             } catch (e) {
                 console.error('Auto-load from Firestore failed:', e);
             }
+            // Start listening for changes pushed by other devices.
+            setupRealtimeSync(user.uid);
         }
 
         // Trigger app initialization if load event already fired
@@ -212,6 +280,11 @@ onAuthStateChanged(auth, async (user) => {
             window.dispatchEvent(event);
         }
     } else {
+        // Stop listening for remote changes when the user signs out.
+        if (_realtimeSyncUnsubscribe) {
+            _realtimeSyncUnsubscribe();
+            _realtimeSyncUnsubscribe = null;
+        }
         // Sign in anonymously (demo mode)
         signInAnonymously(auth)
             .then(() => {
