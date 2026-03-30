@@ -466,6 +466,7 @@ function closeAllLists() {
 
 // --- Navigation (Optimized) ---
 function renderPage(id) {
+    currentPage = id;
     // Use requestAnimationFrame for smooth transitions
     requestAnimationFrame(() => {
         document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
@@ -2917,6 +2918,61 @@ async function handleSyncData() {
 
 window.handleSyncData = handleSyncData;
 
+function isUserActivelyEditing() {
+    // If any input, textarea, or select has focus the user is mid-entry
+    const el = document.activeElement;
+    if (el) {
+        const tag = el.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable) {
+            return true;
+        }
+    }
+    // Stock items or notes opened in edit mode (isEditing flag lives only in memory)
+    if (stock.some(item => item.isEditing)) return true;
+    if (notes.some(note => note.isEditing)) return true;
+    return false;
+}
+
+function refreshAppData() {
+    // Reload all in-memory data from localStorage
+    const loadedCompanyDetails = loadDataFromLocalStorage('companyDetails', {});
+    companyDetails = loadedCompanyDetails;
+    if (!companyDetails.industryMode) companyDetails.industryMode = 'general';
+
+    const storedOrders = loadDataFromLocalStorage('orders', []);
+    const processedOrders = storedOrders.map(order => ({
+        ...order,
+        orderDate: order.orderDate ? new Date(order.orderDate) : new Date()
+    }));
+    orders = processedOrders.filter(order => !order.isDelivered);
+    completedOrders = processedOrders.filter(order => order.isDelivered);
+    orders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+    completedOrders.sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+
+    const storedNotes = loadDataFromLocalStorage('notes', []);
+    notes = storedNotes.map(note => ({
+        ...note,
+        createdAt: note.createdAt ? new Date(note.createdAt) : new Date()
+    }));
+    notes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const storedStock = loadDataFromLocalStorage('stock', []);
+    stock = storedStock.map(item => ({
+        ...item,
+        price: parseFloat(item.price),
+        quantity: item.quantity !== undefined ? parseInt(item.quantity) : 0,
+        barcode: item.barcode || generateBarcodeNumber()
+    }));
+    stock.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Do not re-render if the user is actively editing or entering data anywhere
+    // (billing, adding stock, editing a note, filling settings, etc.)
+    if (currentPage && !isUserActivelyEditing() && currentPage !== 'addOrder') {
+        renderPage(currentPage);
+    }
+}
+window.refreshAppData = refreshAppData;
+
 async function handleLoadData() {
     if (!window.firebaseUserId) {
         showToast('Not signed in');
@@ -2937,8 +2993,8 @@ async function handleLoadData() {
         if (result.data.notes) localStorage.setItem(`quickbill-${userId}-notes`, result.data.notes);
         if (result.data.companyDetails) localStorage.setItem(`quickbill-${userId}-companyDetails`, result.data.companyDetails);
 
-        showToast('✅ Data loaded successfully! Reloading...');
-        setTimeout(() => location.reload(), 1500);
+        showToast('✅ Data loaded successfully!');
+        refreshAppData();
     } else {
         showToast(result.error === 'No data found' ? '📦 No cloud data found' : '❌ Load failed: ' + result.error);
     }
