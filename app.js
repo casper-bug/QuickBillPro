@@ -3412,8 +3412,10 @@ function isValidEmailDomain(email) {
 
 /** True when auto-sync should run */
 function shouldAutoSync() {
-    return localStorage.getItem('quickbill-connection-mode') !== 'offline' &&
-           typeof window.scheduleAutoSync === 'function';
+    if (typeof window.scheduleAutoSync !== 'function') return false;
+    // Always sync when a named (non-anonymous) account is signed in
+    if (window.firebaseUser && !window.firebaseUser.isAnonymous) return true;
+    return localStorage.getItem('quickbill-connection-mode') !== 'offline';
 }
 
 function showOnboarding() {
@@ -3635,7 +3637,7 @@ function setConnectionMode(mode) {
     if (mode === 'online') {
         showToast('☁️ Online mode — data will sync to cloud when signed in');
     } else {
-        showToast('📱 Offline mode — data stays on this device only');
+        showToast('📱 Offline mode — local data preserved. Cloud sync continues when signed in.');
     }
 }
 
@@ -3652,7 +3654,7 @@ function updateConnectionModeUI(mode) {
     if (desc) {
         desc.innerHTML = mode === 'online'
             ? '☁️ <strong>Online</strong> — Data is backed up to the cloud and syncs across all your signed-in devices.'
-            : '📱 <strong>Offline</strong> — All data lives on this device only. No account required. Switch to Online any time to enable sync.';
+            : '📱 <strong>Offline</strong> — All data is saved on this device. When signed in, your data will still sync to the cloud automatically.';
     }
 }
 
